@@ -75,7 +75,7 @@ const ROOM_TYPE_MAP: Record<string, string> = {
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' }).format(amount)
+  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
 
 const formatDate = (date: Date | string) =>
   new Date(date).toLocaleDateString('ar-EG')

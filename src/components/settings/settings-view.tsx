@@ -89,7 +89,7 @@ export default function SettingsView() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">اسم النظام</p>
-              <p className="font-bold text-lg">HotelOS</p>
+              <p className="font-bold text-lg">Dyala Hotel</p>
             </div>
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">الإصدار</p>
@@ -97,7 +97,7 @@ export default function SettingsView() {
             </div>
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">قاعدة البيانات</p>
-              <p className="font-bold text-lg">SQLite</p>
+              <p className="font-bold text-lg">PostgreSql</p>
             </div>
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">الإطار</p>

@@ -4,14 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getDashboardStats, getRevenueReport } from '@/actions'
 import { DollarSign, CalendarDays, BedDouble, TrendingUp } from 'lucide-react'
@@ -46,7 +40,7 @@ interface RevenueReportData {
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' }).format(amount)
+  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
 
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString('ar-EG')

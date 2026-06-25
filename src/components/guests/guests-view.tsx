@@ -39,7 +39,7 @@ const paymentStatusVariant: Record<PaymentStatus, 'default' | 'secondary' | 'des
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' }).format(amount)
+  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
 
 const formatDate = (date: Date | string) => {
   const d = new Date(date)

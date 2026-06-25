@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   // Exclude sharp from server external tracing to avoid native binary copy failures
   serverExternalPackages: ["sharp"],
-  allowedDevOrigins: ['10.241.151.231'],
+  allowedDevOrigins:['0.0.0.0'],
 };
 
 export default nextConfig;

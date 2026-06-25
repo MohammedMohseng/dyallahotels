@@ -107,6 +107,7 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
         ${mobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         ${sidebarOpen ? 'w-64' : 'w-0 lg:w-16'}
         overflow-hidden flex-shrink-0
+
       `}>
         <div className="h-full flex flex-col w-64">
           {/* Logo */}
@@ -115,13 +116,13 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
               <Hotel className="w-5 h-5 text-primary-foreground" />
             </div>
             {sidebarOpen && (
-              <span className="font-bold text-lg whitespace-nowrap">HotelOS</span>
+              <span className="font-bold text-lg whitespace-nowrap">Dyala Hotel</span>
             )}
           </div>
 
           {/* Navigation */}
           <ScrollArea className="flex-1 py-2">
-            <nav className="px-3 space-y-1">
+            <nav className="px-5 space-y-1">
               {filteredNav.map((item) => {
                 const Icon = item.icon
                 const isActive = currentView === item.key
@@ -130,7 +131,7 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
                     key={item.key}
                     onClick={() => handleNavClick(item.key)}
                     className={`
-                      w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      w-full flex justify-start flex-row-reverse items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-colors duration-150
                       ${isActive
                         ? 'bg-primary text-primary-foreground'

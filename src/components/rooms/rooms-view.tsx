@@ -46,7 +46,7 @@ const EMPTY_FORM: RoomFormData = {
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ar-EG', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'SDG',
   }).format(amount)
 }
 
@@ -440,13 +440,13 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
                 {loading ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-10" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-10" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4  w-28" /></TableCell>
                     </TableRow>
                   ))
                 ) : rooms.length === 0 ? (

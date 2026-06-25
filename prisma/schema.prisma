@@ -60,7 +60,6 @@ enum ReservationStatus {
 enum Gender {
   MALE
   FEMALE
-  OTHER
 }
 
 model User {

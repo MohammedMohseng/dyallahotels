@@ -26,7 +26,7 @@ interface CheckInViewProps {
   onNavigate: (view: string, params?: Record<string, string>) => void
 }
 
-const fmt = (n: number) => new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' }).format(n)
+const fmt = (n: number) => new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(n)
 const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString('ar-EG')
 const nightsBetween = (a: Date, b: Date) => Math.max(1, Math.ceil((b.getTime() - a.getTime()) / (86400000)))
 

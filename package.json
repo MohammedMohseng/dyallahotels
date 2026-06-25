@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "db:seed": "node scripts/seed.ts"
+    "db:seed": "bunx tsx scripts/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",

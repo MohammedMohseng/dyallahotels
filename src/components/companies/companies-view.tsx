@@ -56,7 +56,7 @@ interface CompanyDetail {
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' }).format(amount)
+  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
 
 export default function CompaniesView({ companyId, onNavigate }: CompaniesViewProps) {
   const [companies, setCompanies] = useState<CompanyListItem[]>([])
