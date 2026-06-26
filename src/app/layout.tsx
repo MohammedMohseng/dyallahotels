@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "نظام إدارة الفندق - Dyala Hotel",
   description: "نظام داخلي لإدارة عمليات الفندق",
   icons: {
-    icon: "/static/logo.png",
+    icon: "/logo.jpg",
   },
 };
 
