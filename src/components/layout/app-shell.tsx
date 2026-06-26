@@ -10,7 +10,6 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Hotel,
   Menu,
   Search,
   Bell,
@@ -33,6 +32,7 @@ import CompaniesView from "@/components/companies/companies-view";
 import ReportsView from "@/components/reports/reports-view";
 import SettingsView from "@/components/settings/settings-view";
 import { ThemeButton } from "../ui/mode-toggle";
+import { Logo } from "../ui/logo";
 
 interface AppShellProps {
   user: { id: string; name: string; email: string; role: string };
@@ -210,16 +210,14 @@ export function AppShell({
         transition-all duration-300 ease-in-out
         ${mobileOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
         ${sidebarOpen ? "w-64" : "w-0 lg:w-16"}
-        overflow-hidden flex-shrink-0
+        overflow-hidden flex-shrink-0 !px-3
 
       `}
       >
         <div className="h-full flex flex-col w-64">
           {/* Logo */}
-          <div className="p-4 flex items-center gap-3 border-b border-border h-16 flex-shrink-0">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-              <Hotel className="w-5 h-5 text-primary-foreground" />
-            </div>
+          <div className="flex items-center gap-3 border-b border-border h-16 flex-shrink-0">
+            <Logo  sizeParam="md"/>
             {sidebarOpen && (
               <span className="font-bold text-lg whitespace-nowrap">
                 Dyala Hotel
@@ -228,8 +226,8 @@ export function AppShell({
           </div>
 
           {/* Navigation */}
-          <ScrollArea className="flex-1 py-2">
-            <nav className="px-5 space-y-1">
+          <ScrollArea className="flex-1 py-2 w-full">
+            <nav className="space-y-1">
               {filteredNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentView === item.key;
@@ -258,8 +256,8 @@ export function AppShell({
           </ScrollArea>
 
           {/* User section */}
-          <div className="p-3 border-t border-border">
-            <div className="flex items-center gap-3 px-2">
+          <div className="py-3 pl-3 border-t border-border">
+            <div className="flex items-center  gap-3 px-1">
               <Avatar className="w-8 h-8 flex-shrink-0">
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
               </Avatar>

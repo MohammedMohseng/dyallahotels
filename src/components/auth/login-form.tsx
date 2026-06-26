@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Loader2, Hotel } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { Logo } from '../ui/logo'
 
 interface LoginFormProps {
   onLogin: (user: { id: string; name: string; email: string; role: string }) => void
@@ -49,9 +50,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
-              <Hotel className="w-8 h-8 text-primary-foreground" />
-            </div>
+            <Logo sizeParam="sm"/>
           </div>
           <CardTitle className="text-2xl font-bold">نظام إدارة الفندق</CardTitle>
           <p className="text-muted-foreground text-sm mt-1">قم بتسجيل الدخول إلى حسابك</p>
@@ -94,13 +93,13 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               تسجيل الدخول
             </Button>
           </form>
-
+{/* 
           <div className="mt-6 pt-4 border-t text-xs text-muted-foreground space-y-1">
             <p className="font-medium text-foreground/70">بيانات تجريبية:</p>
             <p>المدير: <span className="font-mono">admin</span> / <span className="font-mono">admin123</span></p>
             <p>الاستقبال: <span className="font-mono">reception</span> / <span className="font-mono">reception123</span></p>
             <p>المحاسب: <span className="font-mono">accounts</span> / <span className="font-mono">account123</span></p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>
