@@ -1,114 +1,219 @@
-'use client'
+"use client";
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useState } from "react";
 import {
-  LayoutDashboard, BedDouble, Users, CalendarCheck,
-  Building2, BarChart3, Settings, LogOut, Hotel,
-  ChevronRight, Menu, Search, Bell, Clock, X, ArrowLeftToLine
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import DashboardView from '@/components/dashboard/dashboard-view'
-import RoomsView from '@/components/rooms/rooms-view'
-import GuestsView from '@/components/guests/guests-view'
-import CheckInView from '@/components/stays/check-in-view'
-import ReservationsView from '@/components/reservations/reservations-view'
-import CompaniesView from '@/components/companies/companies-view'
-import ReportsView from '@/components/reports/reports-view'
-import SettingsView from '@/components/settings/settings-view'
+  LayoutDashboard,
+  BedDouble,
+  Users,
+  CalendarCheck,
+  Building2,
+  BarChart3,
+  Settings,
+  LogOut,
+  Hotel,
+  Menu,
+  Search,
+  Bell,
+  Clock,
+  X,
+  ArrowRightToLine,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import DashboardView from "@/components/dashboard/dashboard-view";
+import RoomsView from "@/components/rooms/rooms-view";
+import GuestsView from "@/components/guests/guests-view";
+import CheckInView from "@/components/stays/check-in-view";
+import ReservationsView from "@/components/reservations/reservations-view";
+import CompaniesView from "@/components/companies/companies-view";
+import ReportsView from "@/components/reports/reports-view";
+import SettingsView from "@/components/settings/settings-view";
+import { ThemeButton } from "../ui/mode-toggle";
 
 interface AppShellProps {
-  user: { id: string; name: string; email: string; role: string }
-  currentView: string
-  viewParams: Record<string, string>
-  onNavigate: (view: string, params?: Record<string, string>) => void
-  onLogout: () => void
+  user: { id: string; name: string; email: string; role: string };
+  currentView: string;
+  viewParams: Record<string, string>;
+  onNavigate: (view: string, params?: Record<string, string>) => void;
+  onLogout: () => void;
 }
 
 const navItems = [
-  { key: 'dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, roles: ['ADMIN', 'RECEPTIONIST', 'ACCOUNTANT'] },
-  { key: 'rooms', label: 'الغرف', icon: BedDouble, roles: ['ADMIN', 'RECEPTIONIST'] },
-  { key: 'guests', label: 'الضيوف', icon: Users, roles: ['ADMIN', 'RECEPTIONIST'] },
-  { key: 'checkin', label: 'تسجيل الدخول/الخروج', icon: CalendarCheck, roles: ['ADMIN', 'RECEPTIONIST'] },
-  { key: 'reservations', label: 'الحجوزات', icon: CalendarCheck, roles: ['ADMIN', 'RECEPTIONIST'] },
-  { key: 'companies', label: 'الشركات', icon: Building2, roles: ['ADMIN', 'RECEPTIONIST'] },
-  { key: 'reports', label: 'التقارير', icon: BarChart3, roles: ['ADMIN', 'ACCOUNTANT'] },
-  { key: 'settings', label: 'الإعدادات', icon: Settings, roles: ['ADMIN'] },
-]
+  {
+    key: "dashboard",
+    label: "لوحة التحكم",
+    icon: LayoutDashboard,
+    roles: ["ADMIN", "RECEPTIONIST", "ACCOUNTANT"],
+  },
+  {
+    key: "rooms",
+    label: "الغرف",
+    icon: BedDouble,
+    roles: ["ADMIN", "RECEPTIONIST"],
+  },
+  {
+    key: "guests",
+    label: "الضيوف",
+    icon: Users,
+    roles: ["ADMIN", "RECEPTIONIST"],
+  },
+  {
+    key: "checkin",
+    label: "تسجيل الدخول/الخروج",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "RECEPTIONIST"],
+  },
+  {
+    key: "reservations",
+    label: "الحجوزات",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "RECEPTIONIST"],
+  },
+  {
+    key: "companies",
+    label: "الشركات",
+    icon: Building2,
+    roles: ["ADMIN", "RECEPTIONIST"],
+  },
+  {
+    key: "reports",
+    label: "التقارير",
+    icon: BarChart3,
+    roles: ["ADMIN", "ACCOUNTANT"],
+  },
+  { key: "settings", label: "الإعدادات", icon: Settings, roles: ["ADMIN"] },
+];
 
-const ROLE_AR: Record<string, string> = { ADMIN: 'مدير', RECEPTIONIST: 'استقبال', ACCOUNTANT: 'محاسب' }
+const ROLE_AR: Record<string, string> = {
+  ADMIN: "مدير",
+  RECEPTIONIST: "استقبال",
+  ACCOUNTANT: "محاسب",
+};
 
-export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }: AppShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [currentTime, setCurrentTime] = useState('')
-  const [globalSearch, setGlobalSearch] = useState('')
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
+export function AppShell({
+  user,
+  currentView,
+  viewParams,
+  onNavigate,
+  onLogout,
+}: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   useEffect(() => {
     const update = () => {
-      setCurrentTime(new Date().toLocaleString('ar-EG', {
-        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      }))
-    }
-    update()
-    const interval = setInterval(update, 60000)
-    return () => clearInterval(interval)
-  }, [])
+      setCurrentTime(
+        new Date().toLocaleString("ar-EG", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNavClick = (key: string) => {
-    onNavigate(key)
-    setMobileOpen(false)
-  }
+    onNavigate(key);
+    setMobileOpen(false);
+  };
 
   const handleGlobalSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!globalSearch.trim()) return
-    onNavigate('guests', { search: globalSearch.trim() })
-    setGlobalSearch('')
-    setShowMobileSearch(false)
-  }
+    e.preventDefault();
+    if (!globalSearch.trim()) return;
+    onNavigate("guests", { search: globalSearch.trim() });
+    setGlobalSearch("");
+    setShowMobileSearch(false);
+  };
 
-  const filteredNav = navItems.filter(item => item.roles.includes(user.role))
-  const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  const roleColor = user.role === 'ADMIN' ? 'default' : user.role === 'RECEPTIONIST' ? 'secondary' : 'outline'
+  const filteredNav = navItems.filter((item) => item.roles.includes(user.role));
+  const initials = user.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+  const roleColor =
+    user.role === "ADMIN"
+      ? "default"
+      : user.role === "RECEPTIONIST"
+        ? "secondary"
+        : "outline";
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <DashboardView onNavigate={onNavigate} />
-      case 'rooms': return <RoomsView roomId={viewParams.roomId} onNavigate={onNavigate} />
-      case 'guests': return <GuestsView guestId={viewParams.guestId} search={viewParams.search} onNavigate={onNavigate} />
-      case 'checkin': return <CheckInView userId={user.id} stayId={viewParams.stayId} onNavigate={onNavigate} />
-      case 'reservations': return <ReservationsView onNavigate={onNavigate} />
-      case 'companies': return <CompaniesView companyId={viewParams.companyId} onNavigate={onNavigate} />
-      case 'reports': return <ReportsView />
-      case 'settings': return <SettingsView />
-      default: return <DashboardView onNavigate={onNavigate} />
+      case "dashboard":
+        return <DashboardView onNavigate={onNavigate} />;
+      case "rooms":
+        return <RoomsView roomId={viewParams.roomId} onNavigate={onNavigate} />;
+      case "guests":
+        return (
+          <GuestsView
+            guestId={viewParams.guestId}
+            search={viewParams.search}
+            onNavigate={onNavigate}
+          />
+        );
+      case "checkin":
+        return (
+          <CheckInView
+            userId={user.id}
+            stayId={viewParams.stayId}
+            onNavigate={onNavigate}
+          />
+        );
+      case "reservations":
+        return <ReservationsView onNavigate={onNavigate} />;
+      case "companies":
+        return (
+          <CompaniesView
+            companyId={viewParams.companyId}
+            onNavigate={onNavigate}
+          />
+        );
+      case "reports":
+        return <ReportsView />;
+      case "settings":
+        return <SettingsView />;
+      default:
+        return <DashboardView onNavigate={onNavigate} />;
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
       {/* Mobile Overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={`
+      <aside
+        className={`
         fixed lg:sticky top-0 right-0 z-50 h-screen
         bg-card border-l border-border
         transition-all duration-300 ease-in-out
-        ${mobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-        ${sidebarOpen ? 'w-64' : 'w-0 lg:w-16'}
+        ${mobileOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
+        ${sidebarOpen ? "w-64" : "w-0 lg:w-16"}
         overflow-hidden flex-shrink-0
 
-      `}>
+      `}
+      >
         <div className="h-full flex flex-col w-64">
           {/* Logo */}
           <div className="p-4 flex items-center gap-3 border-b border-border h-16 flex-shrink-0">
@@ -116,7 +221,9 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
               <Hotel className="w-5 h-5 text-primary-foreground" />
             </div>
             {sidebarOpen && (
-              <span className="font-bold text-lg whitespace-nowrap">Dyala Hotel</span>
+              <span className="font-bold text-lg whitespace-nowrap">
+                Dyala Hotel
+              </span>
             )}
           </div>
 
@@ -124,8 +231,8 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
           <ScrollArea className="flex-1 py-2">
             <nav className="px-5 space-y-1">
               {filteredNav.map((item) => {
-                const Icon = item.icon
-                const isActive = currentView === item.key
+                const Icon = item.icon;
+                const isActive = currentView === item.key;
                 return (
                   <button
                     key={item.key}
@@ -133,16 +240,19 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
                     className={`
                       w-full flex justify-start flex-row-reverse items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-colors duration-150
-                      ${isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }
                     `}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
-                    {sidebarOpen && <span className="truncate">{item.label}</span>}
+                    {sidebarOpen && (
+                      <span className="truncate">{item.label}</span>
+                    )}
                   </button>
-                )
+                );
               })}
             </nav>
           </ScrollArea>
@@ -156,13 +266,22 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
               {sidebarOpen && (
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user.name}</p>
-                  <Badge variant={roleColor as any} className="text-[10px] px-1.5 py-0">
+                  <Badge
+                    variant={roleColor as any}
+                    className="text-[10px] px-1.5 py-0"
+                  >
                     {ROLE_AR[user.role] || user.role}
                   </Badge>
                 </div>
               )}
               {sidebarOpen && (
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={onLogout} title="تسجيل الخروج">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={onLogout}
+                  title="تسجيل الخروج"
+                >
                   <LogOut className="w-4 h-4" />
                 </Button>
               )}
@@ -176,21 +295,35 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4 gap-3 flex-shrink-0">
           <Button
-            variant="ghost" size="icon" className="h-9 w-9 lg:hidden"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </Button>
 
           <Button
-            variant="ghost" size="icon" className="h-9 w-9 hidden lg:flex"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 hidden lg:flex"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
-            <ArrowLeftToLine className={`w-5 h-5 transition-transform ${!sidebarOpen ? 'rotate-180' : ''}`} />
+            <ArrowRightToLine
+              className={`w-5 h-5 transition-transform ${!sidebarOpen ? "rotate-180" : ""}`}
+            />
           </Button>
+          <ThemeButton />
 
           {/* Search Bar */}
-          <form onSubmit={handleGlobalSearch} className="hidden sm:flex flex-1 max-w-md">
+          <form
+            onSubmit={handleGlobalSearch}
+            className="hidden sm:flex flex-1 max-w-md"
+          >
             <div className="relative w-full">
               <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -205,11 +338,21 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
           <div className="flex-1 sm:hidden" />
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden" onClick={() => setShowMobileSearch(!showMobileSearch)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 sm:hidden"
+              onClick={() => setShowMobileSearch(!showMobileSearch)}
+            >
               <Search className="w-4 h-4" />
             </Button>
 
-            <Button variant="ghost" size="icon" className="h-9 w-9" title="الإشعارات">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              title="الإشعارات"
+            >
               <Bell className="w-4 h-4" />
             </Button>
 
@@ -241,10 +384,8 @@ export function AppShell({ user, currentView, viewParams, onNavigate, onLogout }
         )}
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {renderView()}
-        </main>
+        <main className="flex-1 p-4 md:p-6 overflow-auto">{renderView()}</main>
       </div>
     </div>
-  )
+  );
 }

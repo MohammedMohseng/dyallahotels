@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { CalendarCheck, CalendarX, Clock, Plus, Search, ChevronLeft, Check, User, BedDouble, CreditCard, ArrowRight, Loader2 } from 'lucide-react'
+import { RoomOption } from '../reservations/reservations-view'
 
 interface CheckInViewProps {
   userId: string
@@ -68,7 +69,7 @@ export default function CheckInView({ userId, stayId, onNavigate }: CheckInViewP
   const [selectedGuest, setSelectedGuest] = useState<any>(null)
   const [showNewGuest, setShowNewGuest] = useState(false)
   const [newGuest, setNewGuest] = useState({ fullName: '', phone: '', nationality: '', gender: 'MALE', notes: '' })
-  const [availableRooms, setAvailableRooms] = useState<any[]>([])
+  const [availableRooms, setAvailableRooms] = useState<RoomOption[]>([])
   const [selectedRoom, setSelectedRoom] = useState<any>(null)
   const [checkInDate, setCheckInDate] = useState(new Date().toISOString().split('T')[0])
   const [expectedCheckout, setExpectedCheckout] = useState('')
@@ -310,7 +311,7 @@ export default function CheckInView({ userId, stayId, onNavigate }: CheckInViewP
                     />
                   </div>
                   {selectedGuest && (
-                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between">
+                    <div className="p-4 bg-primary/5 border-border border-primary/20 rounded-lg flex items-center justify-between">
                       <div>
                         <p className="font-medium">{selectedGuest.fullName}</p>
                         <p className="text-sm text-muted-foreground">{selectedGuest.phone} {selectedGuest.nationality && `• ${selectedGuest.nationality}`}</p>
@@ -319,7 +320,7 @@ export default function CheckInView({ userId, stayId, onNavigate }: CheckInViewP
                     </div>
                   )}
                   {!selectedGuest && guestResults.length > 0 && (
-                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                    <div className="border-borderrounded-lg max-h-64 overflow-y-auto">
                       {guestResults.map((g: any) => (
                         <button key={g.id} className="w-full text-right p-3 hover:bg-accent border-b last:border-0 transition-colors"
                           onClick={() => selectGuest(g)}>
@@ -338,7 +339,7 @@ export default function CheckInView({ userId, stayId, onNavigate }: CheckInViewP
                     </div>
                   )}
                   {showNewGuest && (
-                    <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                    <div className="border-borderrounded-lg p-4 space-y-3 bg-muted/30">
                       <h4 className="font-semibold">ضيف جديد</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div><Label>الاسم الكامل *</Label><Input value={newGuest.fullName} onChange={e => setNewGuest({ ...newGuest, fullName: e.target.value })} /></div>
@@ -383,7 +384,7 @@ export default function CheckInView({ userId, stayId, onNavigate }: CheckInViewP
                     ) : (
                       availableRooms.map((room: any) => (
                         <button key={room.id}
-                          className={`p-3 border rounded-lg text-right transition-all ${
+                          className={`p-3 border-border rounded-lg text-right transition-all ${
                             selectedRoom?.id === room.id ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'hover:border-primary/50 hover:bg-accent'
                           }`}
                           onClick={() => selectRoom(room)}

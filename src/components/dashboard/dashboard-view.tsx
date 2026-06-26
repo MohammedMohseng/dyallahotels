@@ -228,7 +228,7 @@ function RoomCardComponent({
     <button
       type="button"
       onClick={onClick}
-      className={`group text-right rounded-lg border border-r-4 p-3 transition-all
+      className={`group text-right rounded-lg border-border border-r-4 p-3 transition-all
         hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2
         focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer
         ${config.borderClass} ${config.bgClass}`}

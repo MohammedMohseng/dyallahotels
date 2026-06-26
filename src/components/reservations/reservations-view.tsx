@@ -32,7 +32,7 @@ interface GuestOption {
   phone: string
 }
 
-interface RoomOption {
+export interface RoomOption {
   id: string
   roomNumber: string
   type: string
@@ -257,7 +257,7 @@ export default function ReservationsView({ onNavigate }: ReservationsViewProps) 
                   </p>
                 )}
                 {guestResults.length > 0 && (
-                  <div className="rounded-md border max-h-40 overflow-y-auto">
+                  <div className="rounded-md border-border max-h-40 overflow-y-auto">
                     {guestResults.map((guest) => (
                       <button
                         key={guest.id}
