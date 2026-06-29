@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "نظام إدارة الفندق - Dyala Hotel",
+  title: "نظام إدارة الفندق -   Hotel",
   description: "نظام داخلي لإدارة عمليات الفندق",
   icons: {
     icon: "/logo.jpg",

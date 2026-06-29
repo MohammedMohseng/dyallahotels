@@ -89,7 +89,7 @@ export default function SettingsView() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">اسم النظام</p>
-              <p className="font-bold text-lg">Dyala Hotel</p>
+              <p className="font-bold text-lg">  Hotel</p>
             </div>
             <div className="p-3 bg-muted rounded-lg text-center">
               <p className="text-sm text-muted-foreground">الإصدار</p>

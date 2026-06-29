@@ -22,7 +22,7 @@ export const Logo = (sizeParam: string) => {
       className={`w-${size} h-${size} rounded-[22px] overflow-hidden flex items-center justify-center flex-shrink-0`}
     >
       <img
-        src="/logo.jpg"
+        src="/logo"
         alt="logo"
         className="w-full h-full  object-cover text-primary-foreground"
       />
