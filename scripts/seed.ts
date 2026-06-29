@@ -4,20 +4,20 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("جاري تهيئة قاعدة البيانات (Seeding)...");
 
   const hashedPassword = await bcrypt.hash("admin123", 10);
-  const hashedReceptionist = await bcrypt.hash("reception123", 10);
-  const hashedAccountant = await bcrypt.hash("account123", 10);
+  const hashedPasswordReceptionist = await bcrypt.hash("reception123", 10);
+  const hashedPasswordAccountant = await bcrypt.hash("account123", 10);
 
-  // Create users
+  // إنشاء المستخدمين (Users)
   const admin = await prisma.user.upsert({
     where: { email: "admin@hotel.com" },
     update: {},
     create: {
       username: "admin",
       email: "admin@hotel.com",
-      name: "System Administrator",
+      name: "مدير النظام",
       passwordHash: hashedPassword,
       role: "ADMIN",
     },
@@ -29,8 +29,8 @@ async function main() {
     create: {
       username: "reception",
       email: "reception@hotel.com",
-      name: "Mary Johnson",
-      passwordHash: hashedReceptionist,
+      name: "مريم جونسون",
+      passwordHash: hashedPasswordReceptionist,
       role: "RECEPTIONIST",
     },
   });
@@ -41,33 +41,33 @@ async function main() {
     create: {
       username: "accounts",
       email: "accounts@hotel.com",
-      name: "John Smith",
-      passwordHash: hashedAccountant,
+      name: "جون سميث",
+      passwordHash: hashedPasswordAccountant,
       role: "ACCOUNTANT",
     },
   });
 
-  // Create companies
+  // إنشاء الشركات (Companies)
   const company1 = await prisma.company.create({
     data: {
-      name: "Acme Corp",
-      contactPerson: "Tom Wilson",
+      name: "شركة أكمي العالمية",
+      contactPerson: "توم ويلسون",
       phone: "+1-555-0101",
-      address: "123 Business Ave",
+      address: "123 شارع الأعمال",
     },
   });
   const company2 = await prisma.company.create({
     data: {
-      name: "Global Travel Ltd",
-      contactPerson: "Sarah Lee",
+      name: "شركة العالمية للسياحة المحدودة",
+      contactPerson: "سارة لي",
       phone: "+1-555-0202",
-      address: "456 Travel St",
+      address: "456 طريق السفر",
     },
   });
 
-  // Create rooms - 3 floors, various types
+  // إنشاء الغرف (Rooms) - 3 طوابق، أنواع مختلفة
   const roomData = [
-    // Floor 1
+    // الطابق 1
     {
       roomNumber: "101",
       floor: 1,
@@ -103,7 +103,7 @@ async function main() {
       capacity: 2,
       pricePerNight: 75,
     },
-    // Floor 2
+    // الطابق 2
     {
       roomNumber: "201",
       floor: 2,
@@ -139,7 +139,7 @@ async function main() {
       capacity: 2,
       pricePerNight: 80,
     },
-    // Floor 3
+    // الطابق 3
     {
       roomNumber: "301",
       floor: 3,
@@ -182,64 +182,64 @@ async function main() {
     rooms.push(await prisma.room.create({ data: r }));
   }
 
-  // Create guests
+  // إنشاء النزلاء (Guests)
   const guests = [
     {
-      fullName: "James Brown",
+      fullName: "جيمس براون",
       phone: "+1-555-1001",
-      nationality: "American",
+      nationality: "أمريكي",
       passportNumber: "US12345678",
       gender: "MALE" as const,
       companyId: company1.id,
     },
     {
-      fullName: "Maria Garcia",
+      fullName: "ماريا غارسيا",
       phone: "+1-555-1002",
-      nationality: "Spanish",
+      nationality: "إسبانية",
       passportNumber: "ES98765432",
       gender: "FEMALE" as const,
     },
     {
-      fullName: "Chen Wei",
+      fullName: "تشن وي",
       phone: "+86-138-0001-0001",
-      nationality: "Chinese",
+      nationality: "صيني",
       passportNumber: "CN E12345678",
       gender: "MALE" as const,
       companyId: company2.id,
     },
     {
-      fullName: "Aisha Mohammed",
+      fullName: "عائشة محمد",
       phone: "+971-50-123-4567",
-      nationality: "Emirati",
+      nationality: "إماراتية",
       passportNumber: "AE11112222",
       gender: "FEMALE" as const,
     },
     {
-      fullName: "David Kim",
+      fullName: "ديفيد كيم",
       phone: "+82-10-1234-5678",
-      nationality: "Korean",
+      nationality: "كوري",
       passportNumber: "KR12345678",
       gender: "MALE" as const,
       companyId: company1.id,
     },
     {
-      fullName: "Sophie Laurent",
+      fullName: "صوفي لوران",
       phone: "+33-6-12-34-56-78",
-      nationality: "French",
+      nationality: "فرنسية",
       passportNumber: "FR99887766",
       gender: "FEMALE" as const,
     },
     {
-      fullName: "Yuki Tanaka",
+      fullName: "يوكي تاناكا",
       phone: "+81-90-1234-5678",
-      nationality: "Japanese",
+      nationality: "يابانية",
       passportNumber: "JP12345678",
       gender: "FEMALE" as const,
     },
     {
-      fullName: "Robert Taylor",
+      fullName: "روبرت تايلور",
       phone: "+1-555-1008",
-      nationality: "British",
+      nationality: "بريطاني",
       passportNumber: "GB55667788",
       gender: "MALE" as const,
       companyId: company2.id,
@@ -251,7 +251,7 @@ async function main() {
     createdGuests.push(await prisma.guest.create({ data: g }));
   }
 
-  // Create active stays (some rooms occupied)
+  // إنشاء الإقامات النشطة (Active Stays)
   const today = new Date();
   const threeDaysAgo = new Date(today);
   threeDaysAgo.setDate(today.getDate() - 3);
@@ -268,7 +268,7 @@ async function main() {
   const in7Days = new Date(today);
   in7Days.setDate(today.getDate() + 7);
 
-  // Active stays
+  // إقامات نشطة
   const stay1 = await prisma.stay.create({
     data: {
       guestId: createdGuests[0].id,
@@ -341,7 +341,7 @@ async function main() {
     data: { status: "OCCUPIED" },
   });
 
-  // Payments for stays
+  // المدفوعات للإقامات (Payments)
   await prisma.payment.create({
     data: {
       stayId: stay1.id,
@@ -375,7 +375,7 @@ async function main() {
     },
   });
 
-  // Set some rooms to cleaning/maintenance
+  // تحديث بعض الغرف إلى حالة التنظيف أو الصيانة
   await prisma.room.update({
     where: { id: rooms[1].id },
     data: { status: "CLEANING" },
@@ -385,7 +385,7 @@ async function main() {
     data: { status: "MAINTENANCE" },
   });
 
-  // Create reservations
+  // إنشاء الحجوزات (Reservations)
   await prisma.reservation.create({
     data: {
       guestId: createdGuests[3].id,
@@ -412,7 +412,7 @@ async function main() {
     },
   });
 
-  // Create a completed stay for history
+  // إنشاء إقامة مكتملة للسجلات التاريخية
   const completedStay = await prisma.stay.create({
     data: {
       guestId: createdGuests[6].id,
@@ -436,9 +436,9 @@ async function main() {
     },
   });
 
-  console.log("Seed completed successfully!");
+  console.log("تمت تهيئة قاعدة البيانات بنجاح!");
   console.log(
-    `Created ${3} users, ${15} rooms, ${8} guests, ${5} stays, ${2} reservations, ${2} companies`,
+    `تم إنشاء: ${3} مستخدمين، ${15} غرفة، ${8} نزلاء، ${5} إقامات، ${2} حجوزات، و ${2} شركات.`,
   );
 }
 

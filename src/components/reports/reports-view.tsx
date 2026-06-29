@@ -1,151 +1,192 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { toast } from 'sonner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
-import { getDashboardStats, getRevenueReport } from '@/actions'
-import { DollarSign, CalendarDays, BedDouble, TrendingUp } from 'lucide-react'
+import { useState, useEffect, useCallback } from "react";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "../ui/button";
+import { getDashboardStats, getRevenueReport } from "@/actions";
+import { DollarSign, CalendarDays, BedDouble, TrendingUp } from "lucide-react";
 
 interface DashboardStats {
-  totalRooms: number
-  occupiedRooms: number
-  availableRooms: number
-  dailyRevenue: number
-  occupancyRate: number
-  todayCheckins: number
-  todayCheckouts: number
-  cleaningRooms: number
-  maintenanceRooms: number
-  reservedRooms: number
+  totalRooms: number;
+  occupiedRooms: number;
+  availableRooms: number;
+  dailyRevenue: number;
+  occupancyRate: number;
+  todayCheckins: number;
+  todayCheckouts: number;
+  cleaningRooms: number;
+  maintenanceRooms: number;
+  reservedRooms: number;
 }
 
 interface RevenuePayment {
-  id: string
-  amount: number
-  paymentMethod: string
-  createdAt: string
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  createdAt: string;
   stay: {
-    guest: { fullName: string }
-    room: { roomNumber: string }
-  }
+    guest: { fullName: string };
+    room: { roomNumber: string };
+  };
 }
 
 interface RevenueReportData {
-  payments: RevenuePayment[]
-  totalRevenue: number
+  payments: RevenuePayment[];
+  totalRevenue: number;
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
+  new Intl.NumberFormat("ar-EG", { style: "currency", currency: "SDG" }).format(
+    amount,
+  );
 
-const formatDate = (date: string) =>
-  new Date(date).toLocaleDateString('ar-EG')
+const formatDate = (date: string) => new Date(date).toLocaleDateString("ar-EG");
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: 'نقدي',
-  BANK_TRANSFER: 'تحويل بنكي',
-  MOBILE_PAYMENT: 'دفع موبايل',
-  CARD: 'بطاقة',
-}
+  CASH: "نقدي",
+  BANK_TRANSFER: "تحويل بنكي",
+  MOBILE_PAYMENT: "دفع موبايل",
+  CARD: "بطاقة",
+};
 
 export default function ReportsView() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [statsLoading, setStatsLoading] = useState(true)
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState('7')
-  const [reportData, setReportData] = useState<RevenueReportData | null>(null)
-  const [reportLoading, setReportLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("7");
+  const [reportData, setReportData] = useState<RevenueReportData | null>(null);
+  const [reportLoading, setReportLoading] = useState(true);
 
-  const [weeklyRevenue, setWeeklyRevenue] = useState<number>(0)
-  const [weeklyLoading, setWeeklyLoading] = useState(true)
+  const [weeklyRevenue, setWeeklyRevenue] = useState<number>(0);
+  const [weeklyLoading, setWeeklyLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
-    setStatsLoading(true)
+    setStatsLoading(true);
     try {
-      const data = await getDashboardStats()
-      setStats(data as DashboardStats)
+      const data = await getDashboardStats();
+      setStats(data as DashboardStats);
     } catch {
-      toast.error('فشل في تحميل إحصائيات لوحة التحكم')
+      toast.error("فشل في تحميل إحصائيات لوحة التحكم");
     } finally {
-      setStatsLoading(false)
+      setStatsLoading(false);
     }
-  }, [])
+  }, []);
 
   const fetchWeeklyRevenue = useCallback(async () => {
-    setWeeklyLoading(true)
+    setWeeklyLoading(true);
     try {
-      const data = await getRevenueReport(7)
-      setWeeklyRevenue((data as RevenueReportData).totalRevenue)
+      const data = await getRevenueReport(7);
+      setWeeklyRevenue((data as RevenueReportData).totalRevenue);
     } catch {
-      toast.error('فشل في تحميل إيرادات الأسبوع')
+      toast.error("فشل في تحميل إيرادات الأسبوع");
     } finally {
-      setWeeklyLoading(false)
+      setWeeklyLoading(false);
     }
-  }, [])
+  }, []);
 
   const fetchReport = useCallback(async (days: number) => {
-    setReportLoading(true)
+    setReportLoading(true);
     try {
-      const data = await getRevenueReport(days)
-      setReportData(data as RevenueReportData)
+      const data = await getRevenueReport(days);
+      setReportData(data as RevenueReportData);
     } catch {
-      toast.error('فشل في تحميل تقرير الإيرادات')
+      toast.error("فشل في تحميل تقرير الإيرادات");
     } finally {
-      setReportLoading(false)
+      setReportLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    fetchStats()
-    fetchWeeklyRevenue()
-  }, [fetchStats, fetchWeeklyRevenue])
+    fetchStats();
+    fetchWeeklyRevenue();
+  }, [fetchStats, fetchWeeklyRevenue]);
 
   useEffect(() => {
-    fetchReport(parseInt(activeTab))
-  }, [activeTab, fetchReport])
+    fetchReport(parseInt(activeTab));
+  }, [activeTab, fetchReport]);
 
   const summaryCards = [
     {
-      title: 'إيرادات اليوم',
-      value: stats ? formatCurrency(stats.dailyRevenue) : '—',
+      title: "إيرادات اليوم",
+      value: stats ? formatCurrency(stats.dailyRevenue) : "—",
       icon: DollarSign,
       loading: statsLoading,
     },
     {
-      title: 'إيرادات الأسبوع',
-      value: weeklyLoading ? '—' : formatCurrency(weeklyRevenue),
+      title: "إيرادات الأسبوع",
+      value: weeklyLoading ? "—" : formatCurrency(weeklyRevenue),
       icon: TrendingUp,
       loading: weeklyLoading,
     },
     {
-      title: 'الإقامات النشطة',
-      value: stats ? String(stats.occupiedRooms) : '—',
+      title: "الإقامات النشطة",
+      value: stats ? String(stats.occupiedRooms) : "—",
       icon: BedDouble,
       loading: statsLoading,
     },
     {
-      title: 'نسبة الإشغال',
-      value: stats ? `${stats.occupancyRate}%` : '—',
+      title: "نسبة الإشغال",
+      value: stats ? `${stats.occupancyRate}%` : "—",
       icon: CalendarDays,
       loading: statsLoading,
     },
-  ]
+  ];
+
+  const handleExport = () => {
+    const data: any = reportData;
+
+    // 1. توليد تاريخ اليوم وتنسيقه ليكون صالحاً كاسم ملف (مثال: 2026-06-24)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0"); // الشهور تبدأ من 0
+    const day = String(today.getDate()).padStart(2, "0");
+
+    const outputFilename = `${year}-${month}-${day}.csv`;
+    if (!data) return;
+    const csvRows: string[] = ["Month ,Revenue ,Orders ,Expenses ,Profit"];
+    data.payments.forEach((r) => {
+      csvRows.push(
+        `${r.id},${r.stay.guest.fullName},${r.amount},${r.stay.room.roomNumber},${r.paymentMethod},${r.createdAt}`,
+      );
+    });
+    csvRows.push("");
+    csvRows.push("total revenue");
+    csvRows.push(`${data.totalRevenue}`);
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${outputFilename}`;
+    a.click();
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">التقارير</h2>
-        <p className="text-muted-foreground">نظرة عامة على الإيرادات والتحليلات</p>
+        <p className="text-muted-foreground">
+          نظرة عامة على الإيرادات والتحليلات
+        </p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => {
-          const Icon = card.icon
+          const Icon = card.icon;
           return (
             <Card key={card.title}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -162,7 +203,7 @@ export default function ReportsView() {
                 )}
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -173,12 +214,16 @@ export default function ReportsView() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
-              <TabsTrigger value="7">آخر 7 أيام</TabsTrigger>
-              <TabsTrigger value="30">آخر 30 يوم</TabsTrigger>
-              <TabsTrigger value="90">آخر 90 يوم</TabsTrigger>
-            </TabsList>
-
+            <div className="flex justify-between">
+              <TabsList>
+                <TabsTrigger value="7">آخر 7 أيام</TabsTrigger>
+                <TabsTrigger value="30">آخر 30 يوم</TabsTrigger>
+                <TabsTrigger value="90">آخر 90 يوم</TabsTrigger>
+              </TabsList>
+              <Button variant="default" onClick={handleExport}>
+                excel
+              </Button>
+            </div>
             <div className="mt-4">
               {reportLoading ? (
                 <div className="space-y-3">
@@ -187,7 +232,9 @@ export default function ReportsView() {
                   ))}
                 </div>
               ) : !reportData || reportData.payments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">لا توجد مدفوعات لهذه الفترة</p>
+                <p className="text-center text-muted-foreground py-8">
+                  لا توجد مدفوعات لهذه الفترة
+                </p>
               ) : (
                 <>
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -204,17 +251,22 @@ export default function ReportsView() {
                       <TableBody>
                         {reportData.payments.map((payment) => (
                           <TableRow key={payment.id}>
-                            <TableCell>{formatDate(payment.createdAt)}</TableCell>
+                            <TableCell>
+                              {formatDate(payment.createdAt)}
+                            </TableCell>
                             <TableCell className="font-medium">
-                              {payment.stay?.guest?.fullName || '—'}
+                              {payment.stay?.guest?.fullName || "—"}
                             </TableCell>
                             <TableCell>
-                              {payment.stay?.room?.roomNumber || '—'}
+                              {payment.stay?.room?.roomNumber || "—"}
                             </TableCell>
-                            <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                            <TableCell>
+                              {formatCurrency(payment.amount)}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {PAYMENT_METHOD_LABELS[payment.paymentMethod] || payment.paymentMethod}
+                                {PAYMENT_METHOD_LABELS[payment.paymentMethod] ||
+                                  payment.paymentMethod}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -226,7 +278,9 @@ export default function ReportsView() {
                   {/* Total row */}
                   <div className="mt-4 flex items-center justify-end border-t pt-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-muted-foreground">إجمالي الإيرادات:</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        إجمالي الإيرادات:
+                      </span>
                       <span className="text-xl font-bold">
                         {formatCurrency(reportData.totalRevenue)}
                       </span>
@@ -239,5 +293,5 @@ export default function ReportsView() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,0 +1,18 @@
+{
+  "id": "cmqxfqp5d00133r14dak9yna2",
+  "guestId": "cmqxfqnya000r3r14g8mkfvzx",
+  "roomId": "cmqxfqm6k00093r14xkfxu839",
+  "checkIn": "2026-06-27T06:56:13.724Z",
+  "expectedCheckOut": "2026-07-05T06:56:13.724Z",
+  "actualCheckOut": null,
+  "numberOfGuests": 2,
+  "totalPrice": 600,
+  "amountPaid": 600,
+  "paymentStatus": "PAID",
+  "status": "ACTIVE",
+  "notes": null,
+  "createdAt": "2026-06-28T06:56:14.544Z",
+  "updatedAt": "2026-06-28T06:56:14.544Z",
+  "guest": { "fullName": "David Kim" },
+  "room": { "roomNumber": "105" }
+}
