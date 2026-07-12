@@ -1,208 +1,273 @@
-'use client'
+/* eslint-disable react-hooks/set-state-in-effect */
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Skeleton } from '@/components/ui/skeleton'
-import { toast } from 'sonner'
-import { Plus, Search, ArrowLeft, Edit, BedDouble } from 'lucide-react'
-import { getRooms, getRoomById, createRoom, updateRoom, updateRoomStatus } from '@/actions'
-import type { Room, Stay, RoomType, RoomStatus } from '@prisma/client'
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { Plus, Search, ArrowLeft, Edit, BedDouble } from "lucide-react";
+import {
+  getRooms,
+  getRoomById,
+  createRoom,
+  updateRoom,
+  updateRoomStatus,
+} from "@/actions";
+import type { Room, Stay, RoomType, RoomStatus } from "@prisma/client";
+import * as XLSX from "xlsx"
+
 
 interface RoomsViewProps {
-  roomId?: string
-  onNavigate: (view: string, params?: Record<string, string>) => void
+  roomId?: string;
+  onNavigate: (view: string, params?: Record<string, string>) => void;
 }
 
-const ROOM_TYPES: RoomType[] = ['SINGLE', 'DOUBLE', 'TWIN', 'SUITE', 'DELUXE', 'FAMILY']
-const ROOM_STATUSES: RoomStatus[] = ['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE', 'RESERVED']
-const STATUS_CHANGE_OPTIONS: RoomStatus[] = ['AVAILABLE', 'CLEANING', 'MAINTENANCE']
+const ROOM_TYPES: RoomType[] = [
+  "SINGLE",
+  "DOUBLE",
+  "TWIN",
+  "SUITE",
+  "DELUXE",
+  "FAMILY",
+];
+const ROOM_STATUSES: RoomStatus[] = [
+  "AVAILABLE",
+  "OCCUPIED",
+  "CLEANING",
+  "MAINTENANCE",
+  "RESERVED",
+];
+const STATUS_CHANGE_OPTIONS: RoomStatus[] = [
+  "AVAILABLE",
+  "CLEANING",
+  "MAINTENANCE",
+];
 
 interface RoomFormData {
-  roomNumber: string
-  floor: string
-  type: string
-  capacity: string
-  pricePerNight: string
-  notes: string
+  roomNumber: string;
+  floor: string;
+  type: string;
+  capacity: string;
+  pricePerNight: string;
+  notes: string;
 }
 
 const EMPTY_FORM: RoomFormData = {
-  roomNumber: '',
-  floor: '',
-  type: '',
-  capacity: '',
-  pricePerNight: '',
-  notes: '',
-}
+  roomNumber: "",
+  floor: "",
+  type: "",
+  capacity: "",
+  pricePerNight: "",
+  notes: "",
+};
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('ar-EG', {
-    style: 'currency',
-    currency: 'SDG',
-  }).format(amount)
+  return new Intl.NumberFormat("ar-EG", {
+    style: "currency",
+    currency: "SDG",
+  }).format(amount);
 }
 
 function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat('ar-EG', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(date))
+  return new Intl.DateTimeFormat("ar-EG", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(date));
 }
 
 function getRoomTypeLabel(type: RoomType): string {
   const map: Record<RoomType, string> = {
-    SINGLE: 'فردي',
-    DOUBLE: 'مزدوج',
-    TWIN: 'توأم',
-    SUITE: 'جناح',
-    DELUXE: 'ديلوكس',
-    FAMILY: 'عائلي',
-  }
-  return map[type] || type
+    SINGLE: "فردي",
+    DOUBLE: "مزدوج",
+    TWIN: "توأم",
+    SUITE: "جناح",
+    DELUXE: "ديلوكس",
+    FAMILY: "عائلي",
+  };
+  return map[type] || type;
 }
 
 function getRoomStatusLabel(status: RoomStatus): string {
   const map: Record<RoomStatus, string> = {
-    AVAILABLE: 'متاحة',
-    OCCUPIED: 'مشغولة',
-    CLEANING: 'تنظيف',
-    MAINTENANCE: 'صيانة',
-    RESERVED: 'محجوزة',
-  }
-  return map[status] || status
+    AVAILABLE: "متاحة",
+    OCCUPIED: "مشغولة",
+    CLEANING: "تنظيف",
+    MAINTENANCE: "صيانة",
+    RESERVED: "محجوزة",
+  };
+  return map[status] || status;
 }
 
 function getPaymentStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    PAID: 'مدفوع',
-    PARTIAL: 'جزئي',
-    UNPAID: 'غير مدفوع',
-    OVERDUE: 'متأخر',
-  }
-  return map[status] || status
+    PAID: "مدفوع",
+    PARTIAL: "جزئي",
+    UNPAID: "غير مدفوع",
+    OVERDUE: "متأخر",
+  };
+  return map[status] || status;
 }
 
 function getStayStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    ACTIVE: 'نشط',
-    COMPLETED: 'مكتمل',
-    CANCELLED: 'ملغى',
-  }
-  return map[status] || status
+    ACTIVE: "نشط",
+    COMPLETED: "مكتمل",
+    CANCELLED: "ملغى",
+  };
+  return map[status] || status;
 }
 
 function StatusBadge({ status }: { status: RoomStatus }) {
   switch (status) {
-    case 'AVAILABLE':
+    case "AVAILABLE":
       return (
         <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
           متاحة
         </Badge>
-      )
-    case 'OCCUPIED':
-      return <Badge variant="destructive">مشغولة</Badge>
-    case 'CLEANING':
-      return <Badge variant="secondary">تنظيف</Badge>
-    case 'MAINTENANCE':
+      );
+    case "OCCUPIED":
+      return <Badge variant="destructive">مشغولة</Badge>;
+    case "CLEANING":
+      return <Badge variant="secondary">تنظيف</Badge>;
+    case "MAINTENANCE":
       return (
         <Badge variant="outline" className="text-muted-foreground">
           صيانة
         </Badge>
-      )
-    case 'RESERVED':
+      );
+    case "RESERVED":
       return (
-        <Badge variant="outline" className="text-sky-600 border-sky-300 bg-sky-50">
+        <Badge
+          variant="outline"
+          className="text-sky-600 border-sky-300 bg-sky-50"
+        >
           محجوزة
         </Badge>
-      )
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>
+      return <Badge variant="outline">{status}</Badge>;
   }
 }
 
 // ============ LIST VIEW ============
 
-function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate'] }) {
-  const [rooms, setRooms] = useState<(Room & { currentGuest?: string })[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const [typeFilter, setTypeFilter] = useState('ALL')
-  const [floorFilter, setFloorFilter] = useState('ALL')
+function RoomListView({
+  onNavigate,
+}: {
+  onNavigate: RoomsViewProps["onNavigate"];
+}) {
+  const [rooms, setRooms] = useState<(Room & { currentGuest?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [floorFilter, setFloorFilter] = useState("ALL");
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [form, setForm] = useState<RoomFormData>(EMPTY_FORM)
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof RoomFormData, string>>>({})
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<RoomFormData>(EMPTY_FORM);
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof RoomFormData, string>>
+  >({});
 
   const fetchRooms = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const filters: { status?: string; type?: string; floor?: number; search?: string } = {}
-      if (statusFilter !== 'ALL') filters.status = statusFilter
-      if (typeFilter !== 'ALL') filters.type = typeFilter
-      if (floorFilter !== 'ALL') filters.floor = Number(floorFilter)
-      if (search.trim()) filters.search = search.trim()
+      const filters: {
+        status?: string;
+        type?: string;
+        floor?: number;
+        search?: string;
+      } = {};
+      if (statusFilter !== "ALL") filters.status = statusFilter;
+      if (typeFilter !== "ALL") filters.type = typeFilter;
+      if (floorFilter !== "ALL") filters.floor = Number(floorFilter);
+      if (search.trim()) filters.search = search.trim();
 
-      const data = await getRooms(filters)
-      setRooms(data as (Room & { currentGuest?: string })[])
+      const data = await getRooms(filters);
+      setRooms(data as (Room & { currentGuest?: string })[]);
     } catch {
-      toast.error('فشل تحميل الغرف')
+      toast.error("فشل تحميل الغرف");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [statusFilter, typeFilter, floorFilter, search])
+  }, [statusFilter, typeFilter, floorFilter, search]);
 
   useEffect(() => {
-    fetchRooms()
-  }, [fetchRooms])
+    fetchRooms();
+  }, [fetchRooms]);
 
   // Derive unique floors from loaded rooms
-  const floors = Array.from(new Set(rooms.map((r) => r.floor))).sort((a, b) => a - b)
+  const floors = Array.from(new Set(rooms.map((r) => r.floor))).sort(
+    (a, b) => a - b,
+  );
 
   const validateForm = (): boolean => {
-    const errors: Partial<Record<keyof RoomFormData, string>> = {}
+    const errors: Partial<Record<keyof RoomFormData, string>> = {};
 
     if (!form.roomNumber.trim()) {
-      errors.roomNumber = 'رقم الغرفة مطلوب'
+      errors.roomNumber = "رقم الغرفة مطلوب";
     }
     if (!form.floor) {
-      errors.floor = 'الطابق مطلوب'
+      errors.floor = "الطابق مطلوب";
     } else if (isNaN(Number(form.floor)) || Number(form.floor) < 0) {
-      errors.floor = 'يجب أن يكون الطابق رقماً صحيحاً غير سالب'
+      errors.floor = "يجب أن يكون الطابق رقماً صحيحاً غير سالب";
     }
     if (!form.type) {
-      errors.type = 'نوع الغرفة مطلوب'
+      errors.type = "نوع الغرفة مطلوب";
     }
     if (!form.capacity) {
-      errors.capacity = 'السعة مطلوبة'
+      errors.capacity = "السعة مطلوبة";
     } else if (isNaN(Number(form.capacity)) || Number(form.capacity) < 1) {
-      errors.capacity = 'يجب أن تكون السعة على الأقل 1'
+      errors.capacity = "يجب أن تكون السعة على الأقل 1";
     }
     if (!form.pricePerNight) {
-      errors.pricePerNight = 'السعر لليلة مطلوب'
-    } else if (isNaN(Number(form.pricePerNight)) || Number(form.pricePerNight) <= 0) {
-      errors.pricePerNight = 'يجب أن يكون السعر أكبر من 0'
+      errors.pricePerNight = "السعر لليلة مطلوب";
+    } else if (
+      isNaN(Number(form.pricePerNight)) ||
+      Number(form.pricePerNight) <= 0
+    ) {
+      errors.pricePerNight = "يجب أن يكون السعر أكبر من 0";
     }
 
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleCreateRoom = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
       const result = await createRoom({
         roomNumber: form.roomNumber.trim(),
@@ -211,34 +276,207 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
         capacity: Number(form.capacity),
         pricePerNight: Number(form.pricePerNight),
         notes: form.notes.trim() || undefined,
-      })
+      });
 
-      if ('error' in result && result.error) {
-        toast.error(result.error)
+      if ("error" in result && result.error) {
+        toast.error(result.error);
       } else {
-        toast.success(`تم إنشاء غرفة ${form.roomNumber} بنجاح`)
-        setForm(EMPTY_FORM)
-        setFormErrors({})
-        setDialogOpen(false)
-        fetchRooms()
+        toast.success(`تم إنشاء غرفة ${form.roomNumber} بنجاح`);
+        setForm(EMPTY_FORM);
+        setFormErrors({});
+        setDialogOpen(false);
+        fetchRooms();
       }
     } catch {
-      toast.error('فشل إنشاء الغرفة')
+      toast.error("فشل إنشاء الغرفة");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const updateField = (field: keyof RoomFormData, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
+    setForm((prev) => ({ ...prev, [field]: value }));
     if (formErrors[field]) {
       setFormErrors((prev) => {
-        const next = { ...prev }
-        delete next[field]
-        return next
-      })
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
     }
-  }
+  };
+
+  const handleExport = () => {
+    if (!rooms || rooms.length === 0) return;
+
+    // 1. توليد تاريخ اليوم لتسمية الملفات
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+    const excelData = rooms.map((r, index) => ({
+      م: index + 1,
+      "Room NO": r.roomNumber || "-",
+      "Floor": r.floor || "-",
+      "current Guest": r.currentGuest || "-",
+      "status": r.status || "-",
+      "Type": r.type || "-",
+      "notes": r.notes || "-",
+      "تاريخ الإنشاء": r.createdAt
+        ? new Date(r.createdAt).toLocaleDateString("ar-EG")
+        : "-",
+    }));
+
+    // إنشاء ورقة العمل (Worksheet)
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+    worksheet["!dir"] = "ltr";
+
+    // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+
+    // تحميل ملف الـ Excel فوراً
+    XLSX.writeFile(workbook, `Rooms_Report_${formattedDate}.xlsx`);
+
+    const tableRows = rooms
+      .map(
+        (room, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td style="font-weight: 500;">${room.roomNumber || "-"}</td>
+        <td dir="ltr">${room.floor || "-"}</td>
+        <td>${room.currentGuest || "-"}</td>
+        <td>${room.status || "—"}</td>
+        <td>${room.pricePerNight || "_"}</td>
+      </tr>
+    `,
+      )
+      .join("");
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>Rooms Report - ${formattedDate}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap');
+          
+          body {
+            font-family: 'Cairo', sans-serif;
+            margin: 20mm 15mm;
+            color: #333;
+            background-color: #fff;
+          }
+          
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 15px;
+          }
+          
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1e3a8a;
+          }
+          
+          .header .meta {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+          }
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 13px;
+          }
+          
+          th {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            font-weight: 700;
+            padding: 12px 10px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+          }
+          
+          td {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+          }
+          
+          tr:nth-child(even) {
+            background-color: #f8fafc;
+          }
+          
+          .footer-summary {
+            float: left;
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 15px;
+          }
+  
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>تقرير ضيوف الفندق</h1>
+          <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${rooms.length}</div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%;">#</th>
+              <th style="width: 15%;">Room Number</th>
+              <th style="width: 15%;">floor</th>
+              <th style="width: 30%;">current Guest</th>
+              <th style="width: 20%;">status</th>
+              <th style="width: 15%;">price per night</th>
+            </tr>
+
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        
+        <div class="footer-summary">
+          إجمالي الضيوف: ${rooms.length} ضيف
+        </div>
+      </body>
+      </html>
+    `;
+
+    // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+
+      // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+      printWindow.setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -248,118 +486,145 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
           <h2 className="text-2xl font-bold tracking-tight">الغرف</h2>
           <p className="text-muted-foreground">إدارة غرف الفندق وحالاتها</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) {
-            setForm(EMPTY_FORM)
-            setFormErrors({})
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              إضافة غرفة
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>إضافة غرفة جديدة</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="create-roomNumber">رقم الغرفة</Label>
-                <Input
-                  id="create-roomNumber"
-                  placeholder="مثال: 101"
-                  value={form.roomNumber}
-                  onChange={(e) => updateField('roomNumber', e.target.value)}
-                />
-                {formErrors.roomNumber && (
-                  <p className="text-sm text-destructive">{formErrors.roomNumber}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-floor">الطابق</Label>
-                <Input
-                  id="create-floor"
-                  type="number"
-                  placeholder="مثال: 1"
-                  min={0}
-                  value={form.floor}
-                  onChange={(e) => updateField('floor', e.target.value)}
-                />
-                {formErrors.floor && (
-                  <p className="text-sm text-destructive">{formErrors.floor}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-type">نوع الغرفة</Label>
-                <Select value={form.type} onValueChange={(v) => updateField('type', v)}>
-                  <SelectTrigger id="create-type">
-                    <SelectValue placeholder="اختر النوع" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROOM_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {getRoomTypeLabel(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formErrors.type && (
-                  <p className="text-sm text-destructive">{formErrors.type}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-capacity">السعة</Label>
-                <Input
-                  id="create-capacity"
-                  type="number"
-                  placeholder="مثال: 2"
-                  min={1}
-                  value={form.capacity}
-                  onChange={(e) => updateField('capacity', e.target.value)}
-                />
-                {formErrors.capacity && (
-                  <p className="text-sm text-destructive">{formErrors.capacity}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-price">السعر لليلة ($)</Label>
-                <Input
-                  id="create-price"
-                  type="number"
-                  placeholder="مثال: 99.99"
-                  min={0}
-                  step="0.01"
-                  value={form.pricePerNight}
-                  onChange={(e) => updateField('pricePerNight', e.target.value)}
-                />
-                {formErrors.pricePerNight && (
-                  <p className="text-sm text-destructive">{formErrors.pricePerNight}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-notes">ملاحظات</Label>
-                <Textarea
-                  id="create-notes"
-                  placeholder="ملاحظات اختيارية حول هذه الغرفة"
-                  value={form.notes}
-                  onChange={(e) => updateField('notes', e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
-                إلغاء
+        <div className="flex justiffy-center items-center gap-2">
+          <Button variant="default" className="!mx-0" onClick={handleExport}>
+            excel
+          </Button>
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setForm(EMPTY_FORM);
+                setFormErrors({});
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                إضافة غرفة
               </Button>
-              <Button onClick={handleCreateRoom} disabled={submitting}>
-                {submitting ? 'جارٍ الإنشاء...' : 'إنشاء غرفة'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>إضافة غرفة جديدة</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="create-roomNumber">رقم الغرفة</Label>
+                  <Input
+                    id="create-roomNumber"
+                    placeholder="مثال: 101"
+                    value={form.roomNumber}
+                    onChange={(e) => updateField("roomNumber", e.target.value)}
+                  />
+                  {formErrors.roomNumber && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.roomNumber}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-floor">الطابق</Label>
+                  <Input
+                    id="create-floor"
+                    type="number"
+                    placeholder="مثال: 1"
+                    min={0}
+                    value={form.floor}
+                    onChange={(e) => updateField("floor", e.target.value)}
+                  />
+                  {formErrors.floor && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.floor}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-type">نوع الغرفة</Label>
+                  <Select
+                    value={form.type}
+                    onValueChange={(v) => updateField("type", v)}
+                  >
+                    <SelectTrigger id="create-type">
+                      <SelectValue placeholder="اختر النوع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROOM_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {getRoomTypeLabel(type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formErrors.type && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.type}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-capacity">السعة</Label>
+                  <Input
+                    id="create-capacity"
+                    type="number"
+                    placeholder="مثال: 2"
+                    min={1}
+                    value={form.capacity}
+                    onChange={(e) => updateField("capacity", e.target.value)}
+                  />
+                  {formErrors.capacity && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.capacity}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-price">السعر لليلة ($)</Label>
+                  <Input
+                    id="create-price"
+                    type="number"
+                    placeholder="مثال: 99.99"
+                    min={0}
+                    step="0.01"
+                    value={form.pricePerNight}
+                    onChange={(e) =>
+                      updateField("pricePerNight", e.target.value)
+                    }
+                  />
+                  {formErrors.pricePerNight && (
+                    <p className="text-sm text-destructive">
+                      {formErrors.pricePerNight}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-notes">ملاحظات</Label>
+                  <Textarea
+                    id="create-notes"
+                    placeholder="ملاحظات اختيارية حول هذه الغرفة"
+                    value={form.notes}
+                    onChange={(e) => updateField("notes", e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={submitting}
+                >
+                  إلغاء
+                </Button>
+                <Button onClick={handleCreateRoom} disabled={submitting}>
+                  {submitting ? "جارٍ الإنشاء..." : "إنشاء غرفة"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -440,13 +705,27 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
                 {loading ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4  w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-10" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4  w-28" /></TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-10" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-10" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4  w-28" />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : rooms.length === 0 ? (
@@ -455,7 +734,9 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <BedDouble className="h-8 w-8" />
                         <p>لا توجد غرف</p>
-                        <p className="text-sm">حاول تعديل الفلاتر أو أضف غرفة جديدة</p>
+                        <p className="text-sm">
+                          حاول تعديل الفلاتر أو أضف غرفة جديدة
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -464,12 +745,16 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
                     <TableRow
                       key={room.id}
                       className="cursor-pointer transition-colors hover:bg-muted/50"
-                      onClick={() => onNavigate('rooms', { roomId: room.id })}
+                      onClick={() => onNavigate("rooms", { roomId: room.id })}
                     >
-                      <TableCell className="font-medium">{room.roomNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        {room.roomNumber}
+                      </TableCell>
                       <TableCell>{getRoomTypeLabel(room.type)}</TableCell>
                       <TableCell>{room.floor}</TableCell>
-                      <TableCell>{formatCurrency(room.pricePerNight)}</TableCell>
+                      <TableCell>
+                        {formatCurrency(room.pricePerNight)}
+                      </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1">
                           {room.capacity} ضيف
@@ -479,7 +764,7 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
                         <StatusBadge status={room.status} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {room.currentGuest || '—'}
+                        {room.currentGuest || "—"}
                       </TableCell>
                     </TableRow>
                   ))
@@ -490,7 +775,7 @@ function RoomListView({ onNavigate }: { onNavigate: RoomsViewProps['onNavigate']
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 // ============ DETAIL VIEW ============
@@ -499,106 +784,116 @@ function RoomDetailView({
   roomId,
   onNavigate,
 }: {
-  roomId: string
-  onNavigate: RoomsViewProps['onNavigate']
+  roomId: string;
+  onNavigate: RoomsViewProps["onNavigate"];
 }) {
-  const [room, setRoom] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [statusLoading, setStatusLoading] = useState<string | null>(null)
+  const [room, setRoom] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState<string | null>(null);
 
   // Edit dialog state
-  const [editOpen, setEditOpen] = useState(false)
-  const [editSubmitting, setEditSubmitting] = useState(false)
-  const [editForm, setEditForm] = useState<RoomFormData>(EMPTY_FORM)
-  const [editErrors, setEditErrors] = useState<Partial<Record<keyof RoomFormData, string>>>({})
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editForm, setEditForm] = useState<RoomFormData>(EMPTY_FORM);
+  const [editErrors, setEditErrors] = useState<
+    Partial<Record<keyof RoomFormData, string>>
+  >({});
 
   const fetchRoom = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await getRoomById(roomId)
+      const data = await getRoomById(roomId);
       if (!data) {
-        toast.error('الغرفة غير موجودة')
-        onNavigate('rooms')
-        return
+        toast.error("الغرفة غير موجودة");
+        onNavigate("rooms");
+        return;
       }
-      setRoom(data)
+      setRoom(data);
     } catch {
-      toast.error('فشل تحميل تفاصيل الغرفة')
-      onNavigate('rooms')
+      toast.error("فشل تحميل تفاصيل الغرفة");
+      onNavigate("rooms");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [roomId, onNavigate])
+  }, [roomId, onNavigate]);
 
   useEffect(() => {
-    fetchRoom()
-  }, [fetchRoom])
+    fetchRoom();
+  }, [fetchRoom]);
 
   const handleStatusChange = async (newStatus: RoomStatus) => {
-    if (!room || room.status === newStatus) return
-    setStatusLoading(newStatus)
+    if (!room || room.status === newStatus) return;
+    setStatusLoading(newStatus);
     try {
-      const result = await updateRoomStatus(roomId, newStatus)
-      if ('error' in result && result.error) {
-        toast.error(result.error)
+      const result = await updateRoomStatus(roomId, newStatus);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
       } else {
-        toast.success(`تم تحديث حالة الغرفة إلى ${getRoomStatusLabel(newStatus)}`)
-        fetchRoom()
+        toast.success(
+          `تم تحديث حالة الغرفة إلى ${getRoomStatusLabel(newStatus)}`,
+        );
+        fetchRoom();
       }
     } catch {
-      toast.error('فشل تحديث حالة الغرفة')
+      toast.error("فشل تحديث حالة الغرفة");
     } finally {
-      setStatusLoading(null)
+      setStatusLoading(null);
     }
-  }
+  };
 
   const openEditDialog = () => {
-    if (!room) return
+    if (!room) return;
     setEditForm({
       roomNumber: room.roomNumber,
       floor: String(room.floor),
       type: room.type,
       capacity: String(room.capacity),
       pricePerNight: String(room.pricePerNight),
-      notes: room.notes || '',
-    })
-    setEditErrors({})
-    setEditOpen(true)
-  }
+      notes: room.notes || "",
+    });
+    setEditErrors({});
+    setEditOpen(true);
+  };
 
   const validateEditForm = (): boolean => {
-    const errors: Partial<Record<keyof RoomFormData, string>> = {}
+    const errors: Partial<Record<keyof RoomFormData, string>> = {};
 
     if (!editForm.roomNumber.trim()) {
-      errors.roomNumber = 'رقم الغرفة مطلوب'
+      errors.roomNumber = "رقم الغرفة مطلوب";
     }
     if (!editForm.floor) {
-      errors.floor = 'الطابق مطلوب'
+      errors.floor = "الطابق مطلوب";
     } else if (isNaN(Number(editForm.floor)) || Number(editForm.floor) < 0) {
-      errors.floor = 'يجب أن يكون الطابق رقماً صحيحاً غير سالب'
+      errors.floor = "يجب أن يكون الطابق رقماً صحيحاً غير سالب";
     }
     if (!editForm.type) {
-      errors.type = 'نوع الغرفة مطلوب'
+      errors.type = "نوع الغرفة مطلوب";
     }
     if (!editForm.capacity) {
-      errors.capacity = 'السعة مطلوبة'
-    } else if (isNaN(Number(editForm.capacity)) || Number(editForm.capacity) < 1) {
-      errors.capacity = 'يجب أن تكون السعة على الأقل 1'
+      errors.capacity = "السعة مطلوبة";
+    } else if (
+      isNaN(Number(editForm.capacity)) ||
+      Number(editForm.capacity) < 1
+    ) {
+      errors.capacity = "يجب أن تكون السعة على الأقل 1";
     }
     if (!editForm.pricePerNight) {
-      errors.pricePerNight = 'السعر لليلة مطلوب'
-    } else if (isNaN(Number(editForm.pricePerNight)) || Number(editForm.pricePerNight) <= 0) {
-      errors.pricePerNight = 'يجب أن يكون السعر أكبر من 0'
+      errors.pricePerNight = "السعر لليلة مطلوب";
+    } else if (
+      isNaN(Number(editForm.pricePerNight)) ||
+      Number(editForm.pricePerNight) <= 0
+    ) {
+      errors.pricePerNight = "يجب أن يكون السعر أكبر من 0";
     }
 
-    setEditErrors(errors)
-    return Object.keys(errors).length === 0
-  }
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleUpdateRoom = async () => {
-    if (!validateEditForm()) return
+    if (!validateEditForm()) return;
 
-    setEditSubmitting(true)
+    setEditSubmitting(true);
     try {
       const result = await updateRoom(roomId, {
         roomNumber: editForm.roomNumber.trim(),
@@ -607,32 +902,32 @@ function RoomDetailView({
         capacity: Number(editForm.capacity),
         pricePerNight: Number(editForm.pricePerNight),
         notes: editForm.notes.trim() || undefined,
-      })
+      });
 
-      if ('error' in result && result.error) {
-        toast.error(result.error)
+      if ("error" in result && result.error) {
+        toast.error(result.error);
       } else {
-        toast.success('تم تحديث الغرفة بنجاح')
-        setEditOpen(false)
-        fetchRoom()
+        toast.success("تم تحديث الغرفة بنجاح");
+        setEditOpen(false);
+        fetchRoom();
       }
     } catch {
-      toast.error('فشل تحديث الغرفة')
+      toast.error("فشل تحديث الغرفة");
     } finally {
-      setEditSubmitting(false)
+      setEditSubmitting(false);
     }
-  }
+  };
 
   const updateEditField = (field: keyof RoomFormData, value: string) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }))
+    setEditForm((prev) => ({ ...prev, [field]: value }));
     if (editErrors[field]) {
       setEditErrors((prev) => {
-        const next = { ...prev }
-        delete next[field]
-        return next
-      })
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -654,12 +949,13 @@ function RoomDetailView({
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  if (!room) return null
+  if (!room) return null;
 
-  const stayHistory: (Stay & { guest: { fullName: string; phone: string } })[] = room.stays || []
+  const stayHistory: (Stay & { guest: { fullName: string; phone: string } })[] =
+    room.stays || [];
 
   return (
     <div className="space-y-6">
@@ -669,7 +965,7 @@ function RoomDetailView({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => onNavigate('rooms')}
+            onClick={() => onNavigate("rooms")}
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">الرجوع إلى الغرف</span>
@@ -685,12 +981,15 @@ function RoomDetailView({
         </div>
         <div className="flex gap-2">
           <StatusBadge status={room.status} />
-          <Dialog open={editOpen} onOpenChange={(open) => {
-            setEditOpen(open)
-            if (!open) {
-              setEditErrors({})
-            }
-          }}>
+          <Dialog
+            open={editOpen}
+            onOpenChange={(open) => {
+              setEditOpen(open);
+              if (!open) {
+                setEditErrors({});
+              }
+            }}
+          >
             <Button variant="outline" onClick={openEditDialog}>
               <Edit className="mr-2 h-4 w-4" />
               تعديل الغرفة
@@ -706,10 +1005,14 @@ function RoomDetailView({
                     id="edit-roomNumber"
                     placeholder="مثال: 101"
                     value={editForm.roomNumber}
-                    onChange={(e) => updateEditField('roomNumber', e.target.value)}
+                    onChange={(e) =>
+                      updateEditField("roomNumber", e.target.value)
+                    }
                   />
                   {editErrors.roomNumber && (
-                    <p className="text-sm text-destructive">{editErrors.roomNumber}</p>
+                    <p className="text-sm text-destructive">
+                      {editErrors.roomNumber}
+                    </p>
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -720,15 +1023,20 @@ function RoomDetailView({
                     placeholder="مثال: 1"
                     min={0}
                     value={editForm.floor}
-                    onChange={(e) => updateEditField('floor', e.target.value)}
+                    onChange={(e) => updateEditField("floor", e.target.value)}
                   />
                   {editErrors.floor && (
-                    <p className="text-sm text-destructive">{editErrors.floor}</p>
+                    <p className="text-sm text-destructive">
+                      {editErrors.floor}
+                    </p>
                   )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-type">نوع الغرفة</Label>
-                  <Select value={editForm.type} onValueChange={(v) => updateEditField('type', v)}>
+                  <Select
+                    value={editForm.type}
+                    onValueChange={(v) => updateEditField("type", v)}
+                  >
                     <SelectTrigger id="edit-type">
                       <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
@@ -741,7 +1049,9 @@ function RoomDetailView({
                     </SelectContent>
                   </Select>
                   {editErrors.type && (
-                    <p className="text-sm text-destructive">{editErrors.type}</p>
+                    <p className="text-sm text-destructive">
+                      {editErrors.type}
+                    </p>
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -752,10 +1062,14 @@ function RoomDetailView({
                     placeholder="مثال: 2"
                     min={1}
                     value={editForm.capacity}
-                    onChange={(e) => updateEditField('capacity', e.target.value)}
+                    onChange={(e) =>
+                      updateEditField("capacity", e.target.value)
+                    }
                   />
                   {editErrors.capacity && (
-                    <p className="text-sm text-destructive">{editErrors.capacity}</p>
+                    <p className="text-sm text-destructive">
+                      {editErrors.capacity}
+                    </p>
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -767,10 +1081,14 @@ function RoomDetailView({
                     min={0}
                     step="0.01"
                     value={editForm.pricePerNight}
-                    onChange={(e) => updateEditField('pricePerNight', e.target.value)}
+                    onChange={(e) =>
+                      updateEditField("pricePerNight", e.target.value)
+                    }
                   />
                   {editErrors.pricePerNight && (
-                    <p className="text-sm text-destructive">{editErrors.pricePerNight}</p>
+                    <p className="text-sm text-destructive">
+                      {editErrors.pricePerNight}
+                    </p>
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -779,17 +1097,21 @@ function RoomDetailView({
                     id="edit-notes"
                     placeholder="ملاحظات اختيارية حول هذه الغرفة"
                     value={editForm.notes}
-                    onChange={(e) => updateEditField('notes', e.target.value)}
+                    onChange={(e) => updateEditField("notes", e.target.value)}
                     rows={3}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setEditOpen(false)} disabled={editSubmitting}>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                  disabled={editSubmitting}
+                >
                   إلغاء
                 </Button>
                 <Button onClick={handleUpdateRoom} disabled={editSubmitting}>
-                  {editSubmitting ? 'جارٍ الحفظ...' : 'حفظ التغييرات'}
+                  {editSubmitting ? "جارٍ الحفظ..." : "حفظ التغييرات"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -808,7 +1130,9 @@ function RoomDetailView({
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">النوع</p>
-            <p className="text-xl font-semibold">{getRoomTypeLabel(room.type)}</p>
+            <p className="text-xl font-semibold">
+              {getRoomTypeLabel(room.type)}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -820,15 +1144,15 @@ function RoomDetailView({
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">السعر / ليلة</p>
-            <p className="text-xl font-semibold">{formatCurrency(room.pricePerNight)}</p>
+            <p className="text-xl font-semibold">
+              {formatCurrency(room.pricePerNight)}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">السعة</p>
-            <p className="text-xl font-semibold">
-              {room.capacity} ضيف
-            </p>
+            <p className="text-xl font-semibold">{room.capacity} ضيف</p>
           </CardContent>
         </Card>
         <Card>
@@ -850,20 +1174,24 @@ function RoomDetailView({
           <CardContent className="p-4 pt-0">
             <div className="flex flex-wrap gap-2">
               {STATUS_CHANGE_OPTIONS.map((status) => {
-                const isCurrent = room.status === status
-                const isLoading = statusLoading === status
-                const label = getRoomStatusLabel(status)
+                const isCurrent = room.status === status;
+                const isLoading = statusLoading === status;
+                const label = getRoomStatusLabel(status);
                 return (
                   <Button
                     key={status}
-                    variant={isCurrent ? 'default' : 'outline'}
+                    variant={isCurrent ? "default" : "outline"}
                     size="sm"
                     disabled={isCurrent || isLoading}
                     onClick={() => handleStatusChange(status)}
                   >
-                    {isLoading ? 'جارٍ التحديث...' : isCurrent ? `✓ ${label}` : label}
+                    {isLoading
+                      ? "جارٍ التحديث..."
+                      : isCurrent
+                        ? `✓ ${label}`
+                        : label}
                   </Button>
-                )
+                );
               })}
             </div>
           </CardContent>
@@ -874,7 +1202,9 @@ function RoomDetailView({
               <CardTitle className="text-base">ملاحظات</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{room.notes}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {room.notes}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -887,7 +1217,9 @@ function RoomDetailView({
         </CardHeader>
         <CardContent className="p-4 pt-0">
           {stayHistory.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">لا يوجد سجل إقامات لهذه الغرفة</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              لا يوجد سجل إقامات لهذه الغرفة
+            </p>
           ) : (
             <div className="max-h-96 overflow-y-auto">
               <Table>
@@ -904,7 +1236,9 @@ function RoomDetailView({
                 <TableBody>
                   {stayHistory.map((stay) => (
                     <TableRow key={stay.id}>
-                      <TableCell className="font-medium">{stay.guest.fullName}</TableCell>
+                      <TableCell className="font-medium">
+                        {stay.guest.fullName}
+                      </TableCell>
                       <TableCell>{formatDate(stay.checkIn)}</TableCell>
                       <TableCell>
                         {stay.actualCheckOut
@@ -912,10 +1246,14 @@ function RoomDetailView({
                           : formatDate(stay.expectedCheckOut)}
                       </TableCell>
                       <TableCell>{formatCurrency(stay.totalPrice)}</TableCell>
-                      <TableCell>{getPaymentStatusLabel(stay.paymentStatus)}</TableCell>
+                      <TableCell>
+                        {getPaymentStatusLabel(stay.paymentStatus)}
+                      </TableCell>
                       <TableCell>
                         <Badge
-                          variant={stay.status === 'ACTIVE' ? 'destructive' : 'outline'}
+                          variant={
+                            stay.status === "ACTIVE" ? "destructive" : "outline"
+                          }
                         >
                           {getStayStatusLabel(stay.status)}
                         </Badge>
@@ -929,15 +1267,15 @@ function RoomDetailView({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 // ============ MAIN VIEW ============
 
 export default function RoomsView({ roomId, onNavigate }: RoomsViewProps) {
   if (roomId) {
-    return <RoomDetailView roomId={roomId} onNavigate={onNavigate} />
+    return <RoomDetailView roomId={roomId} onNavigate={onNavigate} />;
   }
 
-  return <RoomListView onNavigate={onNavigate} />
+  return <RoomListView onNavigate={onNavigate} />;
 }

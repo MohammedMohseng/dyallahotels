@@ -59,6 +59,8 @@ import type {
   StayStatus,
   RoomType,
 } from "@prisma/client";
+import * as XLSX from 'xlsx';
+
 
 interface GuestsViewProps {
   guestId?: string;
@@ -318,6 +320,7 @@ function GuestListView({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGuests(searchQuery);
   }, [searchQuery, fetchGuests]);
 
@@ -371,86 +374,180 @@ function GuestListView({
     }
   };
 
-  const handleExport = () => {
-    const data: any = guests;
+const handleExport = () => {
+  if (!guests || guests.length === 0) return;
 
-    console.log(data);
+  // 1. توليد تاريخ اليوم لتسمية الملفات
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  const formattedDate = `${year}-${month}-${day}`;
 
-    // 1. توليد تاريخ اليوم وتنسيقه ليكون صالحاً كاسم ملف (مثال: 2026-06-24)
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0"); // الشهور تبدأ من 0
-    const day = String(today.getDate()).padStart(2, "0");
+  // ==========================================
+  // الجزء الأول: تصدير ملف Excel (.xlsx) احترافي
+  // ==========================================
+  
+  // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+  const excelData = guests.map((r, index) => ({
+    "م": index + 1,
+    "الاسم الكامل": r.fullName || "-",
+    "رقم الهاتف": r.phone || "-",
+    "الجنسية": r.nationality || "-",
+    "الشركة": r.company?.name || "-",
+    "رقم جواز السفر": r.passportNumber || "-",
+    "الجنس": r.gender || "-",
+    "تاريخ الإنشاء": r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-EG') : "-",
+  }));
 
-    const outputFilename = `${year}-${month}-${day}.csv`;
-    if (!data) return;
-    const csvRows: string[] = [
-      "id ,name ,phone number ,nationality ,company , passport number, gender , date",
-    ];
-    data.map((r, index) => {
-      setCounter(index + 1);
-      csvRows.push(
-        `${index + 1},${r.fullName},${r.phone},${r.nationality},${r.company?.name || "-"}, ${r.passportNumber} , ${r.gender},${r.createdAt}`,
-      );
-    });
-    csvRows.push("");
-    csvRows.push("total of guests");
-    csvRows.push(`${counter} Guests`);
+  // إنشاء ورقة العمل (Worksheet)
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  
+  // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+  worksheet['!dir'] = 'rtl';
 
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${outputFilename}`;
-    a.click();
+  // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
 
-    const table =`
-      <div id="table"   style="display:block;padding:3px; direction:rtl;">
-      <table style="display:block;width:100%;">
-      <caption style="display:block; text-align:center;">Guest report</caption>
-                <thead style="display:block;width:100%;">
-                  <tr style="display:flex;width:100%; padding-block:2rem; justify-content:space-between; background-color:#84adfc66;">
-                    <th style="text-align:center; display:block;width:10rem;">الاسم</th>
-                    <th style="text-align:center; display:block;width:10rem;">الهاتف</th>
-                    <th style="text-align:center; display:block;width:10rem;">الجنسية</th>
-                    <th style="text-align:center; display:block;width:10rem;">الشركة</th>
-                    <th style="text-align:center; display:block;width:10rem;">الغرفة الحالية</th>
-                  </tr>
-                </thead>
-                <tbody  style="display:flex;width:100%; flex-direction:column;">
-                ` +
-      guests.map(
-        (guest) => `
-                    <tr style="display:flex;width:100%; background-color:#dec9c966; justify-content:space-between;">
-                      <td border style=" text-align:center;padding-block:1rem;min-width:fit-content;width:10rem; display:block;">
-                      ${guest.fullName}
-                      </td>
-                      <td border style="text-align:center;margin-block:1rem;min-width:fit-content;width:10rem; display:block;">
-                      ${guest.phone}
-                      </td>
-                      <td border style="text-align:center;margin-block:1rem;min-width:fit-content;width:3rem; display:block;">
-                        ${guest.nationality ? guest.nationality?.charAt(0) + guest.nationality?.charAt(1) : "_"}
-                      </td>
-                      <td border style="text-align:center;margin-block:1rem;min-width:fit-content;width:10rem; display:block;">
-                        ${guest.company?.name || "—"}
-                      </td>
-                      <td border style="text-align:center;margin-block:1rem;min-width:fit-content;width:10rem; display:block;">
-                        ${guest.currentRoom || "_"}
-                      </td>
-                    </tr>
-                  `,
-      ) +
-      `
-                </tbody>
-              </table>
-            </div>
-    `;
+  // تحميل ملف الـ Excel فوراً
+  XLSX.writeFile(workbook, `تقرير_الضيوف_${formattedDate}.xlsx`);
 
-    const printWindow = window.open("", "_blank");
-    printWindow?.document.write(table);
-    printWindow?.print();
-  };
 
+  // ==========================================
+  // الجزء الثاني: طباعة التقرير بتنسيق PDF أنيق
+  // ==========================================
+  
+  const tableRows = guests.map((guest, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td style="font-weight: 500;">${guest.fullName || "-"}</td>
+      <td dir="ltr">${guest.phone || "-"}</td>
+      <td>${guest.nationality || "-"}</td>
+      <td>${guest.company?.name || "—"}</td>
+      <td>${guest.currentRoom || "_"}</td>
+    </tr>
+  `).join("");
+
+  const printHtml = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>تقرير الضيوف - ${formattedDate}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap');
+        
+        body {
+          font-family: 'Cairo', sans-serif;
+          margin: 20mm 15mm;
+          color: #333;
+          background-color: #fff;
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #3b82f6;
+          padding-bottom: 15px;
+        }
+        
+        .header h1 {
+          margin: 0;
+          font-size: 24px;
+          color: #1e3a8a;
+        }
+        
+        .header .meta {
+          font-size: 14px;
+          color: #666;
+          margin-top: 5px;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+          font-size: 13px;
+        }
+        
+        th {
+          background-color: #f1f5f9;
+          color: #1e293b;
+          font-weight: 700;
+          padding: 12px 10px;
+          border: 1px solid #cbd5e1;
+          text-align: center;
+        }
+        
+        td {
+          padding: 10px;
+          border: 1px solid #e2e8f0;
+          text-align: center;
+        }
+        
+        tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        
+        .footer-summary {
+          float: left;
+          background-color: #eff6ff;
+          border: 1px solid #bfdbfe;
+          padding: 10px 20px;
+          border-radius: 6px;
+          font-weight: bold;
+          color: #1e40af;
+          font-size: 15px;
+        }
+
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>تقرير ضيوف الفندق</h1>
+        <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${guests.length}</div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 5%;">#</th>
+            <th style="width: 25%;">الاسم الكامل</th>
+            <th style="width: 20%;">رقم الهاتف</th>
+            <th style="width: 15%;">الجنسية</th>
+            <th style="width: 20%;">الشركة</th>
+            <th style="width: 15%;">الغرفة الحالية</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+      
+      <div class="footer-summary">
+        إجمالي الضيوف: ${guests.length} ضيف
+      </div>
+    </body>
+    </html>
+  `;
+
+  // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+  const printWindow = window.open("", "_blank");
+  if (printWindow) {
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    
+    // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+    printWindow.setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  }
+};
   return (
     <div className="space-y-4">
       {/* Header with search + add button */}
@@ -735,6 +832,7 @@ function GuestProfileView({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGuest();
   }, [fetchGuest]);
 
