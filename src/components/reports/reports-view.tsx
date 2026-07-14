@@ -145,34 +145,177 @@ export default function ReportsView() {
     },
   ];
 
-  const handleExport = () => {
-    const data: any = reportData;
-
-    // 1. توليد تاريخ اليوم وتنسيقه ليكون صالحاً كاسم ملف (مثال: 2026-06-24)
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0"); // الشهور تبدأ من 0
-    const day = String(today.getDate()).padStart(2, "0");
-
-    const outputFilename = `${year}-${month}-${day}.csv`;
-    if (!data) return;
-    const csvRows: string[] = ["Month ,Revenue ,Orders ,Expenses ,Profit"];
-    data.payments.forEach((r) => {
-      csvRows.push(
-        `${r.id},${r.stay.guest.fullName},${r.amount},${r.stay.room.roomNumber},${r.paymentMethod},${r.createdAt}`,
-      );
-    });
-    csvRows.push("");
-    csvRows.push("total revenue");
-    csvRows.push(`${data.totalRevenue}`);
-
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${outputFilename}`;
-    a.click();
-  };
+    const handleExport = () => {
+      if (!reportData) return;
+  
+      // 1. توليد تاريخ اليوم لتسمية الملفات
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const formattedDate = `${year}-${month}-${day}`;
+  
+      // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+      const excelData = reportData.payments.map((payment, index) => ({
+        "الرقم": index + 1,
+        "تاريخ الإنشاء": payment.createdAt
+          ? new Date(payment.createdAt).toLocaleDateString("ar-EG")
+          : "-",
+        "الضيف": payment.stay?.guest?.fullName || "-",
+        "الغرفة": payment.stay?.room?.roomNumber || "-",
+        "المبلغ": payment.amount || "-",
+        "طريقة الدفع": payment.paymentMethod || "-",
+      }));
+  
+      // إنشاء ورقة العمل (Worksheet)
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+  
+      // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+      worksheet["!dir"] = "ltr";
+  
+      // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+  
+      // تحميل ملف الـ Excel فوراً
+      XLSX.writeFile(workbook, `Payments_Report_${formattedDate}.xlsx`);
+  
+      const tableRows = reportData.payments
+        .map(
+          (payment, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${payment.createdAt || "_"}</td>
+          <td dir="ltr">${payment.stay?.guest?.fullName || "-"}</td>
+          <td>${payment.stay?.room?.roomNumber || "-"}</td>
+          <td>${payment.amount || "—"}</td>
+          <td>${payment.paymentMethod || "—"}</td>
+        </tr>
+      `,
+        )
+        .join("");
+  
+      const printHtml = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>payments Report - ${formattedDate}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap');
+            
+            body {
+              font-family: 'Cairo', sans-serif;
+              margin: 20mm 15mm;
+              color: #333;
+              background-color: #fff;
+            }
+            
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #3b82f6;
+              padding-bottom: 15px;
+            }
+            
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              color: #1e3a8a;
+            }
+            
+            .header .meta {
+              font-size: 14px;
+              color: #666;
+              margin-top: 5px;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+              font-size: 13px;
+            }
+            
+            th {
+              background-color: #f1f5f9;
+              color: #1e293b;
+              font-weight: 700;
+              padding: 12px 10px;
+              border: 1px solid #cbd5e1;
+              text-align: center;
+            }
+            
+            td {
+              padding: 10px;
+              border: 1px solid #e2e8f0;
+              text-align: center;
+            }
+            
+            tr:nth-child(even) {
+              background-color: #f8fafc;
+            }
+            
+            .footer-summary {
+              float: left;
+              background-color: #eff6ff;
+              border: 1px solid #bfdbfe;
+              padding: 10px 20px;
+              border-radius: 6px;
+              font-weight: bold;
+              color: #1e40af;
+              font-size: 15px;
+            }
+    
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>تقرير الدفعيات </h1>
+            <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${tableRows.length}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 15%;">التاريخ</th>
+                <th style="width: 15%;">الضيف</th>
+                <th style="width: 30%;">الغرفة</th>
+                <th style="width: 20%;">المبلغ</th>
+                <th style="width: 15%;">طريقة الدفع</th>
+              </tr>
+  
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          
+          <div class="footer-summary">
+            إجمالي المدفوعات : ${formatCurrency(reportData.totalRevenue)}
+          </div>
+        </body>
+        </html>
+      `;
+  
+      // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+  
+        // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+        printWindow.setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+    };
+  
 
   return (
     <div className="space-y-6">
@@ -221,7 +364,7 @@ export default function ReportsView() {
                 <TabsTrigger value="90">آخر 90 يوم</TabsTrigger>
               </TabsList>
               <Button variant="default" onClick={handleExport}>
-                excel
+                تصدير للإكسيل
               </Button>
             </div>
             <div className="mt-4">

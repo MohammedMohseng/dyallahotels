@@ -384,9 +384,6 @@ const handleExport = () => {
   const day = String(today.getDate()).padStart(2, "0");
   const formattedDate = `${year}-${month}-${day}`;
 
-  // ==========================================
-  // الجزء الأول: تصدير ملف Excel (.xlsx) احترافي
-  // ==========================================
   
   // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
   const excelData = guests.map((r, index) => ({
@@ -414,9 +411,6 @@ const handleExport = () => {
   XLSX.writeFile(workbook, `تقرير_الضيوف_${formattedDate}.xlsx`);
 
 
-  // ==========================================
-  // الجزء الثاني: طباعة التقرير بتنسيق PDF أنيق
-  // ==========================================
   
   const tableRows = guests.map((guest, index) => `
     <tr>
@@ -563,7 +557,7 @@ const handleExport = () => {
         </div>
         <div className="flex justiffy-center items-center gap-2">
           <Button variant="default" className="!mx-0" onClick={handleExport}>
-            excel
+            تصدير للإكسيل
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild className="!mx-0">

@@ -317,13 +317,14 @@ function RoomListView({
 
     // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
     const excelData = rooms.map((r, index) => ({
-      م: index + 1,
-      "Room NO": r.roomNumber || "-",
-      "Floor": r.floor || "-",
-      "current Guest": r.currentGuest || "-",
-      "status": r.status || "-",
-      "Type": r.type || "-",
-      "notes": r.notes || "-",
+      "الرقم": index + 1,
+      "رقم الغرفة": r.roomNumber || "-",
+      "النوع": r.type || "-",
+      "الطابق": r.floor || "-",
+      "السعر/ليلة":r.pricePerNight,
+      "السعة": r.capacity || "-",
+      "الحالة": r.status || "-",
+      "الضيف الحالي": r.currentGuest || "-",
       "تاريخ الإنشاء": r.createdAt
         ? new Date(r.createdAt).toLocaleDateString("ar-EG")
         : "-",
@@ -348,10 +349,13 @@ function RoomListView({
       <tr>
         <td>${index + 1}</td>
         <td style="font-weight: 500;">${room.roomNumber || "-"}</td>
+        <td dir="ltr">${room.type || "-"}</td>
         <td dir="ltr">${room.floor || "-"}</td>
-        <td>${room.currentGuest || "-"}</td>
-        <td>${room.status || "—"}</td>
         <td>${room.pricePerNight || "_"}</td>
+        <td dir="ltr">${room.capacity || "-"}</td>
+        <td>${room.status || "—"}</td>
+        <td>${room.currentGuest || "-"}</td>
+        
       </tr>
     `,
       )
@@ -444,12 +448,14 @@ function RoomListView({
         <table>
           <thead>
             <tr>
-              <th style="width: 5%;">#</th>
-              <th style="width: 15%;">Room Number</th>
-              <th style="width: 15%;">floor</th>
-              <th style="width: 30%;">current Guest</th>
-              <th style="width: 20%;">status</th>
-              <th style="width: 15%;">price per night</th>
+                <th class="width:5%">رقم الغرفة</th>
+                <th class="width:10%">رقم الغرفة</th>
+                <th class="width:15%">النوع</th>
+                <th class="width:15%">الطابق</th>
+                <th class="width:15%">السعر/ليلة</th>
+                <th class="width:5%">السعة</th>
+                <th class="width:15%">الحالة</th>
+                <th class="width:20%">الضيف الحالي</th>
             </tr>
 
           </thead>
@@ -459,7 +465,7 @@ function RoomListView({
         </table>
         
         <div class="footer-summary">
-          إجمالي الضيوف: ${rooms.length} ضيف
+          إجمالي الغرف: ${rooms.length}غرفة
         </div>
       </body>
       </html>
@@ -488,7 +494,7 @@ function RoomListView({
         </div>
         <div className="flex justiffy-center items-center gap-2">
           <Button variant="default" className="!mx-0" onClick={handleExport}>
-            excel
+            تصدير للإكسيل
           </Button>
           <Dialog
             open={dialogOpen}
