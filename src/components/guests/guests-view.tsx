@@ -60,7 +60,7 @@ import type {
   RoomType,
 } from "@prisma/client";
 import * as XLSX from 'xlsx';
-
+import { formatDate , formatCurrency } from "@/lib/utils";
 
 interface GuestsViewProps {
   guestId?: string;
@@ -89,19 +89,6 @@ const paymentStatusVariant: Record<
   OVERDUE: "destructive",
 };
 
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("ar-EG", { style: "currency", currency: "SDG" }).format(
-    amount,
-  );
-
-const formatDate = (date: Date | string) => {
-  const d = new Date(date);
-  return d.toLocaleDateString("ar-EG", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
 
 // ─── Label helpers ───────────────────────────────────────────────────────────
 

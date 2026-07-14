@@ -41,9 +41,9 @@ import {
   updateRoom,
   updateRoomStatus,
 } from "@/actions";
-import type { Room, Stay, RoomType, RoomStatus } from "@prisma/client";
+import type { Room, Stay, RoomType, RoomStatus } from "@prisma/client"
+import { formatDate, formatCurrency } from "@/lib/utils"
 import * as XLSX from "xlsx"
-
 
 interface RoomsViewProps {
   roomId?: string;
@@ -88,21 +88,6 @@ const EMPTY_FORM: RoomFormData = {
   pricePerNight: "",
   notes: "",
 };
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("ar-EG", {
-    style: "currency",
-    currency: "SDG",
-  }).format(amount);
-}
-
-function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("ar-EG", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(date));
-}
 
 function getRoomTypeLabel(type: RoomType): string {
   const map: Record<RoomType, string> = {
@@ -317,13 +302,13 @@ function RoomListView({
 
     // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
     const excelData = rooms.map((r, index) => ({
-      "الرقم": index + 1,
+      الرقم: index + 1,
       "رقم الغرفة": r.roomNumber || "-",
-      "النوع": r.type || "-",
-      "الطابق": r.floor || "-",
-      "السعر/ليلة":r.pricePerNight,
-      "السعة": r.capacity || "-",
-      "الحالة": r.status || "-",
+      النوع: getRoomTypeLabel(r.type) || "-",
+      الطابق: r.floor || "-",
+      "السعر/ليلة": r.pricePerNight,
+      السعة: r.capacity || "-",
+      الحالة: getRoomStatusLabel(r.status) || "-",
       "الضيف الحالي": r.currentGuest || "-",
       "تاريخ الإنشاء": r.createdAt
         ? new Date(r.createdAt).toLocaleDateString("ar-EG")
@@ -349,12 +334,12 @@ function RoomListView({
       <tr>
         <td>${index + 1}</td>
         <td style="font-weight: 500;">${room.roomNumber || "-"}</td>
-        <td dir="ltr">${room.type || "-"}</td>
+        <td dir="ltr">${getRoomTypeLabel(room.type) || "-"}</td>
         <td dir="ltr">${room.floor || "-"}</td>
-        <td>${room.pricePerNight || "_"}</td>
+        <td>${formatCurrency(room.pricePerNight) || "_"}</td>
         <td dir="ltr">${room.capacity || "-"}</td>
-        <td>${room.status || "—"}</td>
-        <td>${room.currentGuest || "-"}</td>
+        <td>${getRoomStatusLabel(room.status) || "—"}</td>
+        <td>${room.currentGuest?.fullName || "-"}</td>
         
       </tr>
     `,
@@ -441,7 +426,7 @@ function RoomListView({
       </head>
       <body>
         <div class="header">
-          <h1>تقرير ضيوف الفندق</h1>
+          <h1>تقرير غرف الفندق</h1>
           <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${rooms.length}</div>
         </div>
         

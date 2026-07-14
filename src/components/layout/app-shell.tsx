@@ -220,7 +220,7 @@ export function AppShell({
             <Logo  sizeParam="md"/>
             {sidebarOpen && (
               <span className="font-bold text-lg whitespace-nowrap">
-                Dyala Hotel
+                 Hotel
               </span>
             )}
           </div>

@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "../ui/button";
 import { getDashboardStats, getRevenueReport } from "@/actions";
 import { DollarSign, CalendarDays, BedDouble, TrendingUp } from "lucide-react";
+import { formatDate ,formatCurrency } from "@/lib/utils";
 
 interface DashboardStats {
   totalRooms: number;
@@ -47,13 +48,6 @@ interface RevenueReportData {
   payments: RevenuePayment[];
   totalRevenue: number;
 }
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("ar-EG", { style: "currency", currency: "SDG" }).format(
-    amount,
-  );
-
-const formatDate = (date: string) => new Date(date).toLocaleDateString("ar-EG");
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CASH: "نقدي",

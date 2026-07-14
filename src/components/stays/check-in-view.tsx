@@ -64,18 +64,15 @@ import {
   Loader2,
 } from "lucide-react";
 import { RoomOption } from "../reservations/reservations-view";
-
+import { PaymentStatus, RoomStatus, RoomType } from "@prisma/client";
+import * as XLSX from "xlsx";
+import {formatDate , formatCurrency} from "@/lib/utils"
 interface CheckInViewProps {
   userId: string;
   stayId?: string;
   onNavigate: (view: string, params?: Record<string, string>) => void;
 }
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("ar-EG", { style: "currency", currency: "SDG" }).format(
-    n,
-  );
-const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString("ar-EG");
 const nightsBetween = (a: Date, b: Date) =>
   Math.max(1, Math.ceil((b.getTime() - a.getTime()) / 86400000));
 
@@ -93,12 +90,14 @@ const PAYMENT_METHOD_AR: Record<string, string> = {
   MOBILE_PAYMENT: "دفع موبايل",
   CARD: "بطاقة",
 };
-const STATUS_AR: Record<string, string> = {
+
+const PAYMENT_STATUS_AR: Record<string, string> = {
   PAID: "مدفوع",
   PARTIAL: "جزئي",
   UNPAID: "غير مدفوع",
   OVERDUE: "متأخر",
 };
+
 const PAYMENT_STATUS_VARIANT: Record<string, any> = {
   PAID: "default",
   PARTIAL: "secondary",
@@ -106,13 +105,38 @@ const PAYMENT_STATUS_VARIANT: Record<string, any> = {
   OVERDUE: "destructive",
 };
 
+interface StaysInterface {
+  room: {
+    roomNumber: string;
+    floor: number;
+    type: RoomType;
+  };
+  guest: {
+    fullName: string;
+    phone: string;
+  };
+  notes: string;
+  amountPaid: number;
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RoomStatus;
+  guestId: string;
+  roomId: string;
+  checkIn: string;
+  expectedCheckOut: string;
+  actualCheckOut: Date;
+  numberOfGuests: number;
+  totalPrice: number;
+  paymentStatus: PaymentStatus;
+}
 export default function CheckInView({
   userId,
   stayId,
   onNavigate,
 }: CheckInViewProps) {
   const [activeTab, setActiveTab] = useState(stayId ? "stays" : "wizard");
-  const [stays, setStays] = useState<any[]>([]);
+  const [stays, setStays] = useState<StaysInterface[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Checkout dialog
@@ -310,6 +334,184 @@ export default function CheckInView({
   const total = calcTotal();
   const remaining = total - amountPaid;
 
+  const handleExport = () => {
+    if (!stays || stays.length === 0) return;
+
+    // 1. توليد تاريخ اليوم لتسمية الملفات
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+    const excelData = stays.map((r, index) => ({
+      الرقم: index + 1,
+      الضيف: r.guest.fullName || "-",
+      "تسجيل الدخول": r.checkIn || "-",
+      "تسجيل الخروج المتوقع": formatDate(r.expectedCheckOut) || "-",
+      "الليالي المتبقية": Math.max(
+        0,
+        nightsBetween(new Date(), new Date(r.expectedCheckOut)),
+      ),
+      الإجمالي: r.totalPrice || "-",
+      المدفوع: r.amountPaid || "-",
+      "حالة الدفع": PAYMENT_STATUS_AR[r.paymentStatus] || "-",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    worksheet["!dir"] = "ltr";
+
+    // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+
+    XLSX.writeFile(workbook, `checkin_Report${formattedDate}.xlsx`);
+    const tableRows = stays
+      .map((r, index) => {
+        const remainingNights = Math.max(
+          0,
+          nightsBetween(new Date(), new Date(r.expectedCheckOut)),
+        );
+
+        return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${r.guest?.fullName || "-"}</td>
+          <td dir="ltr">${r.checkIn || "-"}</td>
+          <td dir="ltr">${formatDate(r.expectedCheckOut) || "-"}</td>
+          <td>${remainingNights}</td>
+          <td>${r.totalPrice || "-"}</td>
+          <td>${r.amountPaid || "-"}</td>
+          <td>${PAYMENT_STATUS_AR[r.paymentStatus] || "-"}</td>
+          <td>
+            <!-- هنا تقدر تحط أزرار الإجراءات مثل التعديل أو الحذف لو محتاجها -->
+            -
+          </td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    const printHtml = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title> check in report- ${formattedDate}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700&display=swap');
+            
+            body {
+              font-family: 'Cairo', sans-serif;
+              margin: 20mm 15mm;
+              color: #333;
+              background-color: #fff;
+            }
+            
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #3b82f6;
+              padding-bottom: 15px;
+            }
+            
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              color: #1e3a8a;
+            }
+            
+            .header .meta {
+              font-size: 14px;
+              color: #666;
+              margin-top: 5px;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+              font-size: 13px;
+            }
+            
+            th {
+              background-color: #f1f5f9;
+              color: #1e293b;
+              font-weight: 700;
+              padding: 12px 10px;
+              border: 1px solid #cbd5e1;
+              text-align: center;
+            }
+            
+            td {
+              padding: 10px;
+              border: 1px solid #e2e8f0;
+              text-align: center;
+            }
+            
+            tr:nth-child(even) {
+              background-color: #f8fafc;
+            }
+            
+            .footer-summary {
+              float: left;
+              background-color: #eff6ff;
+              border: 1px solid #bfdbfe;
+              padding: 10px 20px;
+              border-radius: 6px;
+              font-weight: bold;
+              color: #1e40af;
+              font-size: 15px;
+            }
+    
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>تقرير ضيوف الفندق</h1>
+            <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${stays.length}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">#</th>
+                <th style="width: 15%">الضيف</th>
+                <th style="width: 15%">تسجيل الدخول</th>
+                <th style="width: 15%">تسجيل الخروج المتوقع</th>
+                <th style="width: 10%">الليالي المتبقية</th>
+                <th style="width: 10%">الإجمالي</th>
+                <th style="width: 10%">المدفوع</th>
+                <th style="width: 10%">حالة الدفع</th>
+                <th style="width: 10%">إجراءات</th>
+            </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+    // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+
+      // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+      printWindow.setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -329,9 +531,16 @@ export default function CheckInView({
         {/* ACTIVE STAYS TAB */}
         <TabsContent value="stays">
           <Card>
-            <CardHeader>
-              <CardTitle>الإقامات النشطة حالياً</CardTitle>
-              <CardDescription>جميع النزلاء المقيمين في الفندق</CardDescription>
+            <CardHeader className="flex-row justify-between">
+              <div className="flex flex-col">
+                <CardTitle>الإقامات النشطة حالياً</CardTitle>
+                <CardDescription>
+                  جميع النزلاء المقيمين في الفندق
+                </CardDescription>
+              </div>
+              <Button variant={"default"} onClick={handleExport}>
+                تصدير للإكسيل
+              </Button>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -376,17 +585,17 @@ export default function CheckInView({
                               {stay.guest.fullName}
                             </TableCell>
                             <TableCell>{stay.room.roomNumber}</TableCell>
-                            <TableCell>{fmtDate(stay.checkIn)}</TableCell>
+                            <TableCell>{formatDate(stay.checkIn)}</TableCell>
                             <TableCell>
-                              {fmtDate(stay.expectedCheckOut)}
+                              {formatDate(stay.expectedCheckOut)}
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
                                 {remainingNights} ليلة
                               </Badge>
                             </TableCell>
-                            <TableCell>{fmt(stay.totalPrice)}</TableCell>
-                            <TableCell>{fmt(stay.amountPaid)}</TableCell>
+                            <TableCell>{formatCurrency(stay.totalPrice)}</TableCell>
+                            <TableCell>{formatCurrency(stay.amountPaid)}</TableCell>
                             <TableCell>
                               <Badge
                                 variant={
@@ -394,7 +603,7 @@ export default function CheckInView({
                                   "secondary"
                                 }
                               >
-                                {STATUS_AR[stay.paymentStatus] ||
+                                {PAYMENT_STATUS_AR[stay.paymentStatus] ||
                                   stay.paymentStatus}
                               </Badge>
                             </TableCell>
@@ -671,7 +880,7 @@ export default function CheckInView({
                             {room.floor}
                           </p>
                           <p className="text-sm font-semibold mt-1">
-                            {fmt(room.pricePerNight)} / ليلة
+                            {formatCurrency(room.pricePerNight)} / ليلة
                           </p>
                           <p className="text-xs text-muted-foreground">
                             سعة: {room.capacity} أشخاص
@@ -755,7 +964,7 @@ export default function CheckInView({
                             سعر الليلة
                           </p>
                           <p className="text-2xl font-bold">
-                            {fmt(selectedRoom?.pricePerNight || 0)}
+                            {formatCurrency(selectedRoom?.pricePerNight || 0)}
                           </p>
                         </div>
                         <div>
@@ -763,7 +972,7 @@ export default function CheckInView({
                             الإجمالي
                           </p>
                           <p className="text-2xl font-bold text-primary">
-                            {fmt(total)}
+                            {formatCurrency(total)}
                           </p>
                         </div>
                       </div>
@@ -812,7 +1021,7 @@ export default function CheckInView({
                     </div>
                     <div className="border-t pt-2 flex justify-between text-lg font-bold">
                       <span>الإجمالي:</span>
-                      <span>{fmt(total)}</span>
+                      <span>{formatCurrency(total)}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
@@ -830,7 +1039,7 @@ export default function CheckInView({
                     </div>
                     <div>
                       <Label>المبلغ المتبقي</Label>
-                      <Input value={fmt(Math.max(0, remaining))} disabled />
+                      <Input value={formatCurrency(Math.max(0, remaining))} disabled />
                     </div>
                     <div className="sm:col-span-2">
                       <Label>طريقة الدفع</Label>
@@ -904,13 +1113,13 @@ export default function CheckInView({
                 <div className="flex justify-between">
                   <span>الإجمالي:</span>
                   <span className="font-medium">
-                    {fmt(checkoutStay.totalPrice)}
+                    {formatCurrency(checkoutStay.totalPrice)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>المدفوع مسبقاً:</span>
                   <span className="font-medium">
-                    {fmt(checkoutStay.amountPaid)}
+                    {formatCurrency(checkoutStay.amountPaid)}
                   </span>
                 </div>
               </div>
@@ -927,12 +1136,12 @@ export default function CheckInView({
               </div>
               <div className="flex justify-between font-medium">
                 <span>المجموع الكلي:</span>
-                <span>{fmt(checkoutStay.totalPrice + extraCharges)}</span>
+                <span>{formatCurrency(checkoutStay.totalPrice + extraCharges)}</span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>المتبقي:</span>
                 <span>
-                  {fmt(
+                  {formatCurrency(
                     Math.max(
                       0,
                       checkoutStay.totalPrice +
@@ -999,7 +1208,7 @@ export default function CheckInView({
               <p className="text-sm text-muted-foreground">
                 تاريخ الخروج الحالي:{" "}
                 <span className="font-medium text-foreground">
-                  {fmtDate(extendStay.expectedCheckOut)}
+                  {formatDate(extendStay.expectedCheckOut)}
                 </span>
               </p>
               <div>
@@ -1021,7 +1230,7 @@ export default function CheckInView({
                       new Date(newCheckoutDate),
                     )}{" "}
                     ليلة إضافية (
-                    {fmt(
+                    {formatCurrency(
                       nightsBetween(
                         new Date(extendStay.expectedCheckOut),
                         new Date(newCheckoutDate),
