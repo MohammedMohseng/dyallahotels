@@ -66,7 +66,7 @@ import {
 import { RoomOption } from "../reservations/reservations-view";
 import { PaymentStatus, RoomStatus, RoomType } from "@prisma/client";
 import * as XLSX from "xlsx";
-import {formatDate , formatCurrency} from "@/lib/utils"
+import { formatDate, formatCurrency } from "@/lib/utils";
 interface CheckInViewProps {
   userId: string;
   stayId?: string;
@@ -188,7 +188,10 @@ export default function CheckInView({
   }, []);
 
   useEffect(() => {
-    fetchStays();
+    const loadData = async () => {
+      await fetchStays();
+    };
+    loadData();
   }, [fetchStays]);
 
   const searchGuests = async (q: string) => {
@@ -334,15 +337,9 @@ export default function CheckInView({
   const total = calcTotal();
   const remaining = total - amountPaid;
 
-  const handleExport = () => {
+  const excel = () => {
     if (!stays || stays.length === 0) return;
-
-    // 1. توليد تاريخ اليوم لتسمية الملفات
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    const formattedDate = `${year}-${month}-${day}`;
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
 
     // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
     const excelData = stays.map((r, index) => ({
@@ -367,6 +364,11 @@ export default function CheckInView({
     XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
 
     XLSX.writeFile(workbook, `checkin_Report${formattedDate}.xlsx`);
+  };
+
+  const pdf = () => {
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+
     const tableRows = stays
       .map((r, index) => {
         const remainingNights = Math.max(
@@ -531,16 +533,21 @@ export default function CheckInView({
         {/* ACTIVE STAYS TAB */}
         <TabsContent value="stays">
           <Card>
-            <CardHeader className="flex-row justify-between">
+            <CardHeader className="!flex justify-between">
               <div className="flex flex-col">
                 <CardTitle>الإقامات النشطة حالياً</CardTitle>
                 <CardDescription>
                   جميع النزلاء المقيمين في الفندق
                 </CardDescription>
               </div>
-              <Button variant={"default"} onClick={handleExport}>
-                تصدير للإكسيل
-              </Button>
+              <div className="flex gap-3">
+                <Button variant="default" className="!mx-0" onClick={excel}>
+                  تصدير للإكسيل
+                </Button>
+                <Button variant="default" className="!mx-0" onClick={pdf}>
+                  PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -594,8 +601,12 @@ export default function CheckInView({
                                 {remainingNights} ليلة
                               </Badge>
                             </TableCell>
-                            <TableCell>{formatCurrency(stay.totalPrice)}</TableCell>
-                            <TableCell>{formatCurrency(stay.amountPaid)}</TableCell>
+                            <TableCell>
+                              {formatCurrency(stay.totalPrice)}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(stay.amountPaid)}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 variant={
@@ -812,7 +823,6 @@ export default function CheckInView({
                             <SelectContent>
                               <SelectItem value="MALE">ذكر</SelectItem>
                               <SelectItem value="FEMALE">أنثى</SelectItem>
-                              <SelectItem value="OTHER">آخر</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1039,7 +1049,10 @@ export default function CheckInView({
                     </div>
                     <div>
                       <Label>المبلغ المتبقي</Label>
-                      <Input value={formatCurrency(Math.max(0, remaining))} disabled />
+                      <Input
+                        value={formatCurrency(Math.max(0, remaining))}
+                        disabled
+                      />
                     </div>
                     <div className="sm:col-span-2">
                       <Label>طريقة الدفع</Label>
@@ -1136,7 +1149,9 @@ export default function CheckInView({
               </div>
               <div className="flex justify-between font-medium">
                 <span>المجموع الكلي:</span>
-                <span>{formatCurrency(checkoutStay.totalPrice + extraCharges)}</span>
+                <span>
+                  {formatCurrency(checkoutStay.totalPrice + extraCharges)}
+                </span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>المتبقي:</span>

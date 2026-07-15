@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "../ui/button";
 import { getDashboardStats, getRevenueReport } from "@/actions";
 import { DollarSign, CalendarDays, BedDouble, TrendingUp } from "lucide-react";
-import { formatDate ,formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 
 interface DashboardStats {
   totalRooms: number;
@@ -104,12 +104,18 @@ export default function ReportsView() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
-    fetchWeeklyRevenue();
+    const loadData = async () => {
+      await fetchStats();
+      await fetchWeeklyRevenue();
+    };
+    loadData();
   }, [fetchStats, fetchWeeklyRevenue]);
 
   useEffect(() => {
-    fetchReport(parseInt(activeTab));
+    const loadData = async () => {
+      await fetchReport(parseInt(activeTab));
+    };
+    loadData();
   }, [activeTab, fetchReport]);
 
   const summaryCards = [
@@ -139,57 +145,56 @@ export default function ReportsView() {
     },
   ];
 
-    const handleExport = () => {
-      if (!reportData) return;
-  
-      // 1. توليد تاريخ اليوم لتسمية الملفات
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, "0");
-      const day = String(today.getDate()).padStart(2, "0");
-      const formattedDate = `${year}-${month}-${day}`;
-  
-      // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
-      const excelData = reportData.payments.map((payment, index) => ({
-        "الرقم": index + 1,
-        "تاريخ الإنشاء": payment.createdAt
-          ? new Date(payment.createdAt).toLocaleDateString("ar-EG")
-          : "-",
-        "الضيف": payment.stay?.guest?.fullName || "-",
-        "الغرفة": payment.stay?.room?.roomNumber || "-",
-        "المبلغ": payment.amount || "-",
-        "طريقة الدفع": payment.paymentMethod || "-",
-      }));
-  
-      // إنشاء ورقة العمل (Worksheet)
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-  
-      // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
-      worksheet["!dir"] = "ltr";
-  
-      // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
-  
-      // تحميل ملف الـ Excel فوراً
-      XLSX.writeFile(workbook, `Payments_Report_${formattedDate}.xlsx`);
-  
-      const tableRows = reportData.payments
-        .map(
-          (payment, index) => `
+  const excel = () => {
+    if (!reportData) return;
+
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+
+    // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+    const excelData = reportData.payments.map((payment, index) => ({
+      الرقم: index + 1,
+      "تاريخ الإنشاء": payment.createdAt
+        ? new Date(payment.createdAt).toLocaleDateString("ar-EG")
+        : "-",
+      الضيف: payment.stay?.guest?.fullName || "-",
+      الغرفة: payment.stay?.room?.roomNumber || "-",
+      المبلغ: payment.amount || "-",
+      "طريقة الدفع": PAYMENT_METHOD_LABELS[payment.paymentMethod] ||  "-",
+    }));
+
+    // إنشاء ورقة العمل (Worksheet)
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+    worksheet["!dir"] = "ltr";
+
+    // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+
+    // تحميل ملف الـ Excel فوراً
+    XLSX.writeFile(workbook, `Payments_Report_${formattedDate}.xlsx`);
+  };
+
+  const pdf = () => {
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+
+    const tableRows = reportData?.payments
+      .map(
+        (payment, index) => `
         <tr>
           <td>${index + 1}</td>
           <td>${payment.createdAt || "_"}</td>
           <td dir="ltr">${payment.stay?.guest?.fullName || "-"}</td>
           <td>${payment.stay?.room?.roomNumber || "-"}</td>
           <td>${payment.amount || "—"}</td>
-          <td>${payment.paymentMethod || "—"}</td>
+          <td>${PAYMENT_METHOD_LABELS[payment.paymentMethod] || "—"}</td>
         </tr>
       `,
-        )
-        .join("");
-  
-      const printHtml = `
+      )
+      .join("");
+
+    const printHtml = `
         <!DOCTYPE html>
         <html dir="rtl" lang="ar">
         <head>
@@ -270,7 +275,7 @@ export default function ReportsView() {
         <body>
           <div class="header">
             <h1>تقرير الدفعيات </h1>
-            <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${tableRows.length}</div>
+            <div class="meta">تاريخ التقرير: ${formattedDate} | إجمالي المدخلات: ${tableRows?.length}</div>
           </div>
           
           <table>
@@ -291,25 +296,24 @@ export default function ReportsView() {
           </table>
           
           <div class="footer-summary">
-            إجمالي المدفوعات : ${formatCurrency(reportData.totalRevenue)}
+            إجمالي المدفوعات : ${formatCurrency(reportData ? reportData.totalRevenue : 0)}
           </div>
         </body>
         </html>
       `;
-  
-      // فتح نافذة الطباعة وضخ التصميم الأنيق بها
-      const printWindow = window.open("", "_blank");
-      if (printWindow) {
-        printWindow.document.write(printHtml);
-        printWindow.document.close();
-  
-        // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
-        printWindow.setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
-    };
-  
+
+    // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+
+      // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+      printWindow.setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -357,9 +361,14 @@ export default function ReportsView() {
                 <TabsTrigger value="30">آخر 30 يوم</TabsTrigger>
                 <TabsTrigger value="90">آخر 90 يوم</TabsTrigger>
               </TabsList>
-              <Button variant="default" onClick={handleExport}>
+              <div className="flex gap-3">
+              <Button variant="default" className="!mx-0" onClick={excel}>
                 تصدير للإكسيل
               </Button>
+              <Button variant="default" className="!mx-0" onClick={pdf}>
+                PDF
+              </Button>
+              </div>
             </div>
             <div className="mt-4">
               {reportLoading ? (

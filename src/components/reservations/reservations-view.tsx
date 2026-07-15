@@ -134,7 +134,10 @@ export default function ReservationsView({
   }, [statusFilter]);
 
   useEffect(() => {
-    fetchReservations();
+    const loadData = async () => {
+      await fetchReservations();
+    };
+    loadData();
   }, [fetchReservations]);
 
   const handleGuestSearch = useCallback(async (query: string) => {

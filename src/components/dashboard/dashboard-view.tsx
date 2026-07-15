@@ -19,12 +19,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getDashboardStats, getRoomsWithStatus } from "@/actions";
+import { getDashboardStats, getRoomsWithStatus, getUsers } from "@/actions";
 import type { DashboardStats } from "@/types";
 import type { RoomStatus, RoomType } from "@prisma/client";
+import { formatCurrency } from "@/lib/utils";
 
 interface DashboardViewProps {
   onNavigate: (view: string, params?: Record<string, string>) => void;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 interface RoomStay {
@@ -117,15 +125,6 @@ const ROOM_TYPE_LABELS: Record<RoomType, string> = {
   DELUXE: "ديلوكس",
   FAMILY: "عائلي",
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("ar-EG", {
-    style: "currency",
-    currency: "SDG",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function getRemainingNights(expectedCheckOut: Date): number {
   const now = new Date();
@@ -277,6 +276,26 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const checkSession = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/session");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUser(data.user);
+          return data.user;
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      await checkSession();
+    };
+    loadData();
+  }, [checkSession]);
 
   const fetchData = useCallback(async () => {
     setLoadingStats(true);
@@ -299,7 +318,10 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const loadData = async () => {
+      await fetchData();
+    };
+    loadData();
   }, [fetchData]);
 
   const roomsByFloor = useMemo(() => groupRoomsByFloor(rooms), [rooms]);
@@ -375,117 +397,125 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
           </div>
         ) : null}
       </section>
-
-      <section aria-label="إجراءات سريعة">
-        <Card className="py-0 gap-0 overflow-hidden">
-          <CardHeader className="px-6 py-4 pb-0">
-            <CardTitle className="text-base">إجراءات سريعة</CardTitle>
-          </CardHeader>
-          <CardContent className="px-6 py-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Button
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 px-3"
-                onClick={() => onNavigate("checkin")}
-              >
-                <LogIn className="size-5 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-xs font-medium">تسجيل دخول جديد</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 px-3"
-                onClick={() => onNavigate("guests", { action: "new" })}
-              >
-                <UserPlus className="size-5 text-primary" />
-                <span className="text-xs font-medium">إضافة ضيف</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 px-3"
-                onClick={() => onNavigate("reservations", { action: "new" })}
-              >
-                <CalendarPlus className="size-5 text-teal-600 dark:text-teal-400" />
-                <span className="text-xs font-medium">إنشاء حجز</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-auto flex-col gap-2 py-4 px-3"
-                onClick={() => onNavigate("reports")}
-              >
-                <BarChart3 className="size-5 text-amber-600 dark:text-amber-400" />
-                <span className="text-xs font-medium">عرض التقارير</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section aria-label="حالة الغرف">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Building2 className="size-5 text-muted-foreground" />
-            حالة الغرف المباشرة
-          </h2>
-          {rooms.length > 0 && !loadingRooms && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-              {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((status) => (
-                <span key={status} className="flex items-center gap-1.5">
-                  <span
-                    className={`size-2 rounded-full ${STATUS_CONFIG[status].dotClass}`}
-                  />
-                  {STATUS_CONFIG[status].label}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {loadingRooms ? (
-          <div className="space-y-6">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <RoomGridSkeleton key={i} />
-            ))}
-          </div>
-        ) : sortedFloors.length > 0 ? (
-          <div className="space-y-6">
-            {sortedFloors.map((floor) => {
-              const floorRooms = roomsByFloor.get(floor) ?? [];
-              return (
-                <div key={floor}>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                    <Building2 className="size-3.5" />
-                    الطابق {floor}
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-1.5 py-0"
-                    >
-                      {floorRooms.length} غرفة
-                    </Badge>
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
-                    {floorRooms.map((room) => (
-                      <RoomCardComponent
-                        key={room.id}
-                        room={room}
-                        onClick={() => onNavigate("rooms", { roomId: room.id })}
-                      />
-                    ))}
-                  </div>
+      {!(user?.role === "ACCOUNTANT") ? (
+        <>
+          <section aria-label="إجراءات سريعة">
+            <Card className="py-0 gap-0 overflow-hidden">
+              <CardHeader className="px-6 py-4 pb-0">
+                <CardTitle className="text-base">إجراءات سريعة</CardTitle>
+              </CardHeader>
+              <CardContent className="px-6 py-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col gap-2 py-4 px-3"
+                    onClick={() => onNavigate("checkin")}
+                  >
+                    <LogIn className="size-5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-medium">تسجيل دخول جديد</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col gap-2 py-4 px-3"
+                    onClick={() => onNavigate("guests", { action: "new" })}
+                  >
+                    <UserPlus className="size-5 text-primary" />
+                    <span className="text-xs font-medium">إضافة ضيف</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col gap-2 py-4 px-3"
+                    onClick={() =>
+                      onNavigate("reservations", { action: "new" })
+                    }
+                  >
+                    <CalendarPlus className="size-5 text-teal-600 dark:text-teal-400" />
+                    <span className="text-xs font-medium">إنشاء حجز</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-col gap-2 py-4 px-3"
+                    onClick={() => onNavigate("reports")}
+                  >
+                    <BarChart3 className="size-5 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-medium">عرض التقارير</span>
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <Card className="py-12">
-            <CardContent className="flex flex-col items-center justify-center text-center p-6">
-              <Building2 className="size-10 text-muted-foreground/50 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">
-                لم يتم العثور على غرف
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </section>
+              </CardContent>
+            </Card>
+          </section>
+          <section aria-label="حالة الغرف">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+                <Building2 className="size-5 text-muted-foreground" />
+                حالة الغرف المباشرة
+              </h2>
+              {rooms.length > 0 && !loadingRooms && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                  {(Object.keys(STATUS_CONFIG) as StatusKey[]).map((status) => (
+                    <span key={status} className="flex items-center gap-1.5">
+                      <span
+                        className={`size-2 rounded-full ${STATUS_CONFIG[status].dotClass}`}
+                      />
+                      {STATUS_CONFIG[status].label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {loadingRooms ? (
+              <div className="space-y-6">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <RoomGridSkeleton key={i} />
+                ))}
+              </div>
+            ) : sortedFloors.length > 0 ? (
+              <div className="space-y-6">
+                {sortedFloors.map((floor) => {
+                  const floorRooms = roomsByFloor.get(floor) ?? [];
+                  return (
+                    <div key={floor}>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                        <Building2 className="size-3.5" />
+                        الطابق {floor}
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          {floorRooms.length} غرفة
+                        </Badge>
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
+                        {floorRooms.map((room) => (
+                          <RoomCardComponent
+                            key={room.id}
+                            room={room}
+                            onClick={() =>
+                              onNavigate("rooms", { roomId: room.id })
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card className="py-12">
+                <CardContent className="flex flex-col items-center justify-center text-center p-6">
+                  <Building2 className="size-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    لم يتم العثور على غرف
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        </>
+      ) : (
+        " "
+      )}
     </div>
   );
 }

@@ -59,8 +59,8 @@ import type {
   StayStatus,
   RoomType,
 } from "@prisma/client";
-import * as XLSX from 'xlsx';
-import { formatDate , formatCurrency } from "@/lib/utils";
+import * as XLSX from "xlsx";
+import { formatDate, formatCurrency } from "@/lib/utils";
 
 interface GuestsViewProps {
   guestId?: string;
@@ -88,7 +88,6 @@ const paymentStatusVariant: Record<
   UNPAID: "outline",
   OVERDUE: "destructive",
 };
-
 
 // ─── Label helpers ───────────────────────────────────────────────────────────
 
@@ -125,7 +124,6 @@ function getGenderLabel(gender: string): string {
   const map: Record<string, string> = {
     MALE: "ذكر",
     FEMALE: "أنثى",
-    OTHER: "آخر",
   };
   return map[gender] || gender;
 }
@@ -342,7 +340,7 @@ function GuestListView({
         nationality: form.nationality.trim() || undefined,
         passportNumber: form.passportNumber.trim() || undefined,
         nationalId: form.nationalId.trim() || undefined,
-        gender: (form.gender as "MALE" | "FEMALE" | "OTHER") || undefined,
+        gender: (form.gender as "MALE" | "FEMALE") || undefined,
         companyId: form.companyId || undefined,
         notes: form.notes.trim() || undefined,
       });
@@ -361,45 +359,43 @@ function GuestListView({
     }
   };
 
-const handleExport = () => {
-  if (!guests || guests.length === 0) return;
+  const excel = () => {
+    if (!guests || guests.length === 0) return;
 
-  // 1. توليد تاريخ اليوم لتسمية الملفات
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  const formattedDate = `${year}-${month}-${day}`;
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
 
-  
-  // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
-  const excelData = guests.map((r, index) => ({
-    "م": index + 1,
-    "الاسم الكامل": r.fullName || "-",
-    "رقم الهاتف": r.phone || "-",
-    "الجنسية": r.nationality || "-",
-    "الشركة": r.company?.name || "-",
-    "رقم جواز السفر": r.passportNumber || "-",
-    "الجنس": r.gender || "-",
-    "تاريخ الإنشاء": r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-EG') : "-",
-  }));
+    // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+    const excelData = guests.map((r, index) => ({
+      م: index + 1,
+      "الاسم الكامل": r.fullName || "-",
+      "رقم الهاتف": r.phone || "-",
+      الجنسية: r.nationality || "-",
+      الشركة: r.company?.name || "-",
+      "رقم جواز السفر": r.passportNumber || "-",
+      الجنس: r.gender || "-",
+      "تاريخ الإنشاء": r.createdAt
+        ? new Date(r.createdAt).toLocaleDateString("ar-EG")
+        : "-",
+    }));
 
-  // إنشاء ورقة العمل (Worksheet)
-  const worksheet = XLSX.utils.json_to_sheet(excelData);
-  
-  // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
-  worksheet['!dir'] = 'rtl';
+    // إنشاء ورقة العمل (Worksheet)
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-  // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+    // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+    worksheet["!dir"] = "rtl";
+    // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+    // تحميل ملف الـ Excel فوراً
+    XLSX.writeFile(workbook, `تقرير_الضيوف_${formattedDate}.xlsx`);
+  };
 
-  // تحميل ملف الـ Excel فوراً
-  XLSX.writeFile(workbook, `تقرير_الضيوف_${formattedDate}.xlsx`);
+  const pdf = () => {
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
 
-
-  
-  const tableRows = guests.map((guest, index) => `
+    const tableRows = guests
+      .map(
+        (guest, index) => `
     <tr>
       <td>${index + 1}</td>
       <td style="font-weight: 500;">${guest.fullName || "-"}</td>
@@ -408,9 +404,11 @@ const handleExport = () => {
       <td>${guest.company?.name || "—"}</td>
       <td>${guest.currentRoom || "_"}</td>
     </tr>
-  `).join("");
+  `,
+      )
+      .join("");
 
-  const printHtml = `
+    const printHtml = `
     <!DOCTYPE html>
     <html dir="rtl" lang="ar">
     <head>
@@ -517,18 +515,18 @@ const handleExport = () => {
     </html>
   `;
 
-  // فتح نافذة الطباعة وضخ التصميم الأنيق بها
-  const printWindow = window.open("", "_blank");
-  if (printWindow) {
-    printWindow.document.write(printHtml);
-    printWindow.document.close();
-    
-    // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
-    printWindow.setTimeout(() => {
-      printWindow.print();
-    }, 500);
-  }
-};
+    // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+
+      // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+      printWindow.setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    }
+  };
   return (
     <div className="space-y-4">
       {/* Header with search + add button */}
@@ -543,8 +541,11 @@ const handleExport = () => {
           />
         </div>
         <div className="flex justiffy-center items-center gap-2">
-          <Button variant="default" className="!mx-0" onClick={handleExport}>
+          <Button variant="default" className="!mx-0" onClick={excel}>
             تصدير للإكسيل
+          </Button>
+          <Button variant="default" className="!mx-0" onClick={pdf}>
+            PDF
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild className="!mx-0">
@@ -711,7 +712,6 @@ function GuestForm({
             <SelectContent>
               <SelectItem value="MALE">ذكر</SelectItem>
               <SelectItem value="FEMALE">أنثى</SelectItem>
-              <SelectItem value="OTHER">آخر</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -853,7 +853,7 @@ function GuestProfileView({
         nationality: form.nationality.trim() || undefined,
         passportNumber: form.passportNumber.trim() || undefined,
         nationalId: form.nationalId.trim() || undefined,
-        gender: (form.gender as "MALE" | "FEMALE" | "OTHER") || undefined,
+        gender: (form.gender as "MALE" | "FEMALE") || undefined,
         companyId: form.companyId || undefined,
         notes: form.notes.trim() || undefined,
       });

@@ -76,10 +76,19 @@ export async function getRooms(filters?: { status?: string; type?: string; floor
   if (filters?.floor) where.floor = filters.floor
   if (filters?.search) where.roomNumber = { contains: filters.search }
 
+
   return db.room.findMany({
     where,
     orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+     include: {
+      stays: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        include: { guest: { select: { fullName: true, phone: true } } },
+      },
+    },
   })
+
 }
 
 export async function getRoomById(id: string) {

@@ -41,9 +41,9 @@ import {
   updateRoom,
   updateRoomStatus,
 } from "@/actions";
-import type { Room, Stay, RoomType, RoomStatus } from "@prisma/client"
-import { formatDate, formatCurrency } from "@/lib/utils"
-import * as XLSX from "xlsx"
+import type { Room, Stay, RoomType, RoomStatus } from "@prisma/client";
+import { formatDate, formatCurrency } from "@/lib/utils";
+import * as XLSX from "xlsx";
 
 interface RoomsViewProps {
   roomId?: string;
@@ -170,7 +170,17 @@ function RoomListView({
 }: {
   onNavigate: RoomsViewProps["onNavigate"];
 }) {
-  const [rooms, setRooms] = useState<(Room & { currentGuest?: string })[]>([]);
+  // نقوم بتعريف كائن الغرفة مدمجاً معه الحجوزات والضيوف
+  const [rooms, setRooms] = useState<
+    (Room & {
+      stays: {
+        guest: {
+          fullName: string;
+          phone: string;
+        };
+      }[];
+    })[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -200,7 +210,17 @@ function RoomListView({
       if (search.trim()) filters.search = search.trim();
 
       const data = await getRooms(filters);
-      setRooms(data as (Room & { currentGuest?: string })[]);
+      console.log(data[0]?.stays[0]?.guest?.fullName);
+      setRooms(
+        data as (Room & {
+          stays: {
+            guest: {
+              fullName: string;
+              phone: string;
+            };
+          }[];
+        })[],
+      );
     } catch {
       toast.error("فشل تحميل الغرف");
     } finally {
@@ -290,47 +310,46 @@ function RoomListView({
     }
   };
 
-  const handleExport = () => {
-    if (!rooms || rooms.length === 0) return;
+    const excel = function() {
+      if (!rooms || rooms.length === 0) return;
 
-    // 1. توليد تاريخ اليوم لتسمية الملفات
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    const formattedDate = `${year}-${month}-${day}`;
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`
+      // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
+      const excelData = rooms.map((r, index) => ({
+        الرقم: index + 1,
+        "رقم الغرفة": r.roomNumber || "-",
+        النوع: getRoomTypeLabel(r.type) || "-",
+        الطابق: r.floor || "-",
+        "السعر/ليلة": r.pricePerNight,
+        السعة: r.capacity || "-",
+        الحالة: getRoomStatusLabel(r.status) || "-",
+        "الضيف الحالي": r.stays[0]?.guest?.fullName || "-",
+        "تاريخ الإنشاء": r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString("ar-EG")
+          : "-",
+      }));
 
-    // تحضير البيانات لملف Excel (عناوين الأعمدة متناسقة)
-    const excelData = rooms.map((r, index) => ({
-      الرقم: index + 1,
-      "رقم الغرفة": r.roomNumber || "-",
-      النوع: getRoomTypeLabel(r.type) || "-",
-      الطابق: r.floor || "-",
-      "السعر/ليلة": r.pricePerNight,
-      السعة: r.capacity || "-",
-      الحالة: getRoomStatusLabel(r.status) || "-",
-      "الضيف الحالي": r.currentGuest || "-",
-      "تاريخ الإنشاء": r.createdAt
-        ? new Date(r.createdAt).toLocaleDateString("ar-EG")
-        : "-",
-    }));
+      // إنشاء ورقة العمل (Worksheet)
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-    // إنشاء ورقة العمل (Worksheet)
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+      // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
+      worksheet["!dir"] = "ltr";
 
-    // ضبط اتجاه ورقة العمل ليكون من اليمين إلى اليسار (RTL)
-    worksheet["!dir"] = "ltr";
+      // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
 
-    // إنشاء كتاب العمل (Workbook) وإضافة الورقة إليه
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "الضيوف");
+      // تحميل ملف الـ Excel فوراً
+      XLSX.writeFile(workbook, `Rooms_Report_${formattedDate}.xlsx`);
+    
+    }
 
-    // تحميل ملف الـ Excel فوراً
-    XLSX.writeFile(workbook, `Rooms_Report_${formattedDate}.xlsx`);
+    const pdf = function() {
 
-    const tableRows = rooms
-      .map(
-        (room, index) => `
+    const formattedDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`
+      const tableRows = rooms
+        .map(
+          (room, index) => `
       <tr>
         <td>${index + 1}</td>
         <td style="font-weight: 500;">${room.roomNumber || "-"}</td>
@@ -339,14 +358,14 @@ function RoomListView({
         <td>${formatCurrency(room.pricePerNight) || "_"}</td>
         <td dir="ltr">${room.capacity || "-"}</td>
         <td>${getRoomStatusLabel(room.status) || "—"}</td>
-        <td>${room.currentGuest?.fullName || "-"}</td>
+        <td>${room.stays[0]?.guest?.fullName || "-"}</td>
         
       </tr>
     `,
-      )
-      .join("");
+        )
+        .join("");
 
-    const printHtml = `
+      const printHtml = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
@@ -456,19 +475,19 @@ function RoomListView({
       </html>
     `;
 
-    // فتح نافذة الطباعة وضخ التصميم الأنيق بها
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(printHtml);
-      printWindow.document.close();
+      // فتح نافذة الطباعة وضخ التصميم الأنيق بها
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
 
-      // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
-      printWindow.setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    }
+        // الانتظار قليلاً لضمان تحميل الخطوط (Cairo Font) ثم فتح أمر الطباعة/الحفظ كـ PDF
+        printWindow.setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+  
   };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -478,8 +497,15 @@ function RoomListView({
           <p className="text-muted-foreground">إدارة غرف الفندق وحالاتها</p>
         </div>
         <div className="flex justiffy-center items-center gap-2">
-          <Button variant="default" className="!mx-0" onClick={handleExport}>
+          <Button
+            variant="default"
+            className="!mx-0"
+            onClick={excel}
+          >
             تصدير للإكسيل
+          </Button>
+          <Button variant="default" className="!mx-0" onClick={pdf}>
+            PDF
           </Button>
           <Dialog
             open={dialogOpen}
@@ -755,7 +781,7 @@ function RoomListView({
                         <StatusBadge status={room.status} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {room.currentGuest || "—"}
+                        {room.stays[0]?.guest?.fullName || "—"}
                       </TableCell>
                     </TableRow>
                   ))

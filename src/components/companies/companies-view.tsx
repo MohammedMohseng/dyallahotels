@@ -1,159 +1,204 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { toast } from 'sonner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCompanies,
   getCompanyById,
   createCompany,
   updateCompany,
   getGuests,
-} from '@/actions'
-import { Plus, ArrowLeft, Building2, Phone, Users, Pencil } from 'lucide-react'
+} from "@/actions";
+import { Plus, ArrowLeft, Building2, Phone, Users, Pencil } from "lucide-react";
 
 interface CompaniesViewProps {
-  companyId?: string
-  onNavigate: (view: string, params?: Record<string, string>) => void
+  companyId?: string;
+  onNavigate: (view: string, params?: Record<string, string>) => void;
 }
 
 interface CompanyListItem {
-  id: string
-  name: string
-  contactPerson: string | null
-  phone: string | null
-  address: string | null
-  notes: string | null
-  _count: { guests: number }
+  id: string;
+  name: string;
+  contactPerson: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  _count: { guests: number };
 }
 
 interface CompanyDetail {
-  id: string
-  name: string
-  contactPerson: string | null
-  phone: string | null
-  address: string | null
-  notes: string | null
+  id: string;
+  name: string;
+  contactPerson: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
   guests: Array<{
-    id: string
-    fullName: string
-    phone: string
+    id: string;
+    fullName: string;
+    phone: string;
     stays: Array<{
-      id: string
-      room: { roomNumber: string } | null
-    }>
-  }>
+      id: string;
+      room: { roomNumber: string } | null;
+    }>;
+  }>;
 }
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'SDG' }).format(amount)
+  new Intl.NumberFormat("ar-EG", { style: "currency", currency: "SDG" }).format(
+    amount,
+  );
 
-export default function CompaniesView({ companyId, onNavigate }: CompaniesViewProps) {
-  const [companies, setCompanies] = useState<CompanyListItem[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
+export default function CompaniesView({
+  companyId,
+  onNavigate,
+}: CompaniesViewProps) {
+  const [companies, setCompanies] = useState<CompanyListItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
   // Detail view state
-  const [companyDetail, setCompanyDetail] = useState<CompanyDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [companyDetail, setCompanyDetail] = useState<CompanyDetail | null>(
+    null,
+  );
+  const [detailLoading, setDetailLoading] = useState(false);
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    contactPerson: '',
-    phone: '',
-    address: '',
-    notes: '',
-  })
-  const [submitting, setSubmitting] = useState(false)
+    name: "",
+    contactPerson: "",
+    phone: "",
+    address: "",
+    notes: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchCompanies = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await getCompanies(searchQuery || undefined)
-      setCompanies(data as CompanyListItem[])
+      const data = await getCompanies(searchQuery || undefined);
+      setCompanies(data as CompanyListItem[]);
     } catch {
-      toast.error('فشل في تحميل الشركات')
+      toast.error("فشل في تحميل الشركات");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [searchQuery])
+  }, [searchQuery]);
 
   useEffect(() => {
-    if (!companyId) {
-      fetchCompanies()
-    }
-  }, [fetchCompanies, companyId])
-
-  const fetchCompanyDetail = useCallback(async (id: string) => {
-    setDetailLoading(true)
-    try {
-      const data = await getCompanyById(id)
-      if (!data) {
-        toast.error('الشركة غير موجودة')
-        onNavigate('companies')
-        return
+    const loadData = async ()=>{
+      if (!companyId) {
+      await  fetchCompanies();
       }
-      setCompanyDetail(data as CompanyDetail)
-    } catch {
-      toast.error('فشل في تحميل تفاصيل الشركة')
-    } finally {
-      setDetailLoading(false)
     }
-  }, [onNavigate])
+    loadData()
+  }, [fetchCompanies, companyId]);
+
+
+
+  const fetchCompanyDetail = useCallback(
+    async (id: string) => {
+      setDetailLoading(true);
+      try {
+        const data = await getCompanyById(id);
+        if (!data) {
+          toast.error("الشركة غير موجودة");
+          onNavigate("companies");
+          return;
+        }
+        setCompanyDetail(data as CompanyDetail);
+      } catch {
+        toast.error("فشل في تحميل تفاصيل الشركة");
+      } finally {
+        setDetailLoading(false);
+      }
+    },
+    [onNavigate],
+  );
 
   useEffect(() => {
-    if (companyId) {
-      fetchCompanyDetail(companyId)
-    }
-  }, [companyId, fetchCompanyDetail])
+    const loadData = async () => {
+      if (companyId) {
+        await fetchCompanyDetail(companyId);
+      }
+    };
+    loadData();
+  }, [companyId, fetchCompanyDetail]);
+
 
   const resetForm = () => {
-    setFormData({ name: '', contactPerson: '', phone: '', address: '', notes: '' })
-    setIsEditing(false)
-    setEditId(null)
-  }
+    setFormData({
+      name: "",
+      contactPerson: "",
+      phone: "",
+      address: "",
+      notes: "",
+    });
+    setIsEditing(false);
+    setEditId(null);
+  };
 
   const handleOpenCreate = () => {
-    resetForm()
-    setIsEditing(false)
-    setDialogOpen(true)
-  }
+    resetForm();
+    setIsEditing(false);
+    setDialogOpen(true);
+  };
 
   const handleOpenEdit = () => {
-    if (!companyDetail) return
+    if (!companyDetail) return;
     setFormData({
       name: companyDetail.name,
-      contactPerson: companyDetail.contactPerson || '',
-      phone: companyDetail.phone || '',
-      address: companyDetail.address || '',
-      notes: companyDetail.notes || '',
-    })
-    setIsEditing(true)
-    setEditId(companyDetail.id)
-    setDialogOpen(true)
-  }
+      contactPerson: companyDetail.contactPerson || "",
+      phone: companyDetail.phone || "",
+      address: companyDetail.address || "",
+      notes: companyDetail.notes || "",
+    });
+    setIsEditing(true);
+    setEditId(companyDetail.id);
+    setDialogOpen(true);
+  };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      toast.error('اسم الشركة مطلوب')
-      return
+      toast.error("اسم الشركة مطلوب");
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
       const payload = {
         name: formData.name,
@@ -161,37 +206,40 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
         phone: formData.phone || null,
         address: formData.address || null,
         notes: formData.notes || null,
-      }
+      };
 
-      const result = isEditing && editId
-        ? await updateCompany(editId, payload)
-        : await createCompany(payload)
+      const result =
+        isEditing && editId
+          ? await updateCompany(editId, payload)
+          : await createCompany(payload);
 
-      if ('error' in result && result.error) {
-        toast.error(result.error)
+      if ("error" in result && result.error) {
+        toast.error(result.error);
       } else {
-        toast.success(isEditing ? 'تم تحديث الشركة بنجاح' : 'تم إنشاء الشركة بنجاح')
-        setDialogOpen(false)
-        resetForm()
+        toast.success(
+          isEditing ? "تم تحديث الشركة بنجاح" : "تم إنشاء الشركة بنجاح",
+        );
+        setDialogOpen(false);
+        resetForm();
         if (companyId) {
-          fetchCompanyDetail(companyId)
+          fetchCompanyDetail(companyId);
         } else {
-          fetchCompanies()
+          fetchCompanies();
         }
       }
     } catch {
-      toast.error(isEditing ? 'فشل في تحديث الشركة' : 'فشل في إنشاء الشركة')
+      toast.error(isEditing ? "فشل في تحديث الشركة" : "فشل في إنشاء الشركة");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   // Detail View
   if (companyId) {
     if (detailLoading) {
       return (
         <div className="space-y-6">
-          <Button variant="ghost" onClick={() => onNavigate('companies')}>
+          <Button variant="ghost" onClick={() => onNavigate("companies")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             العودة إلى الشركات
           </Button>
@@ -201,15 +249,15 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
             <Skeleton className="h-60 w-full" />
           </div>
         </div>
-      )
+      );
     }
 
-    if (!companyDetail) return null
+    if (!companyDetail) return null;
 
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => onNavigate('companies')}>
+          <Button variant="ghost" onClick={() => onNavigate("companies")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             رجوع
           </Button>
@@ -221,7 +269,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">{companyDetail.name}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {companyDetail.name}
+              </h2>
               <p className="text-muted-foreground">تفاصيل الشركة</p>
             </div>
           </div>
@@ -238,20 +288,28 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">جهة الاتصال</p>
-                <p className="text-sm">{companyDetail.contactPerson || '—'}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  جهة الاتصال
+                </p>
+                <p className="text-sm">{companyDetail.contactPerson || "—"}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">الهاتف</p>
-                <p className="text-sm">{companyDetail.phone || '—'}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  الهاتف
+                </p>
+                <p className="text-sm">{companyDetail.phone || "—"}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">العنوان</p>
-                <p className="text-sm">{companyDetail.address || '—'}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  العنوان
+                </p>
+                <p className="text-sm">{companyDetail.address || "—"}</p>
               </div>
               <div className="sm:col-span-2">
-                <p className="text-sm font-medium text-muted-foreground">ملاحظات</p>
-                <p className="text-sm">{companyDetail.notes || '—'}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  ملاحظات
+                </p>
+                <p className="text-sm">{companyDetail.notes || "—"}</p>
               </div>
             </div>
           </CardContent>
@@ -260,14 +318,20 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>الضيوف المرتبطون</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('guests')}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNavigate("guests")}
+            >
               <Plus className="mr-2 h-4 w-4" />
               إضافة ضيف إلى الشركة
             </Button>
           </CardHeader>
           <CardContent>
             {companyDetail.guests.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا يوجد ضيوف مرتبطون بهذه الشركة</p>
+              <p className="text-center text-muted-foreground py-8">
+                لا يوجد ضيوف مرتبطون بهذه الشركة
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -281,11 +345,15 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                   <TableBody>
                     {companyDetail.guests.map((guest) => (
                       <TableRow key={guest.id}>
-                        <TableCell className="font-medium">{guest.fullName}</TableCell>
+                        <TableCell className="font-medium">
+                          {guest.fullName}
+                        </TableCell>
                         <TableCell>{guest.phone}</TableCell>
                         <TableCell>
                           {guest.stays.length > 0 && guest.stays[0].room ? (
-                            <Badge variant="outline">{guest.stays[0].room.roomNumber}</Badge>
+                            <Badge variant="outline">
+                              {guest.stays[0].room.roomNumber}
+                            </Badge>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -300,10 +368,13 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
         </Card>
 
         {/* Edit Dialog (reused for detail view) */}
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) resetForm()
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>تعديل الشركة</DialogTitle>
@@ -313,7 +384,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>الاسم *</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="اسم الشركة"
                 />
               </div>
@@ -321,7 +394,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>جهة الاتصال</Label>
                 <Input
                   value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactPerson: e.target.value })
+                  }
                   placeholder="اسم جهة الاتصال"
                 />
               </div>
@@ -329,7 +404,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>الهاتف</Label>
                 <Input
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   placeholder="رقم الهاتف"
                 />
               </div>
@@ -337,7 +414,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>العنوان</Label>
                 <Input
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   placeholder="عنوان الشركة"
                 />
               </div>
@@ -345,24 +424,32 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>ملاحظات</Label>
                 <Textarea
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
                   placeholder="ملاحظات إضافية..."
                   rows={3}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm() }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}
+              >
                 إلغاء
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                {submitting ? "جاري الحفظ..." : "حفظ التغييرات"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-    )
+    );
   }
 
   // List View
@@ -373,10 +460,13 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
           <h2 className="text-2xl font-bold tracking-tight">الشركات</h2>
           <p className="text-muted-foreground">إدارة الحسابات المؤسسية</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) resetForm()
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button onClick={handleOpenCreate}>
               <Plus className="mr-2 h-4 w-4" />
@@ -392,7 +482,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>الاسم *</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="اسم الشركة"
                 />
               </div>
@@ -400,7 +492,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>جهة الاتصال</Label>
                 <Input
                   value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactPerson: e.target.value })
+                  }
                   placeholder="اسم جهة الاتصال"
                 />
               </div>
@@ -408,7 +502,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>الهاتف</Label>
                 <Input
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   placeholder="رقم الهاتف"
                 />
               </div>
@@ -416,7 +512,9 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>العنوان</Label>
                 <Input
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   placeholder="عنوان الشركة"
                 />
               </div>
@@ -424,18 +522,26 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 <Label>ملاحظات</Label>
                 <Textarea
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
                   placeholder="ملاحظات إضافية..."
                   rows={3}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm() }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDialogOpen(false);
+                  resetForm();
+                }}
+              >
                 إلغاء
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'جاري الإنشاء...' : 'إنشاء شركة'}
+                {submitting ? "جاري الإنشاء..." : "إنشاء شركة"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -458,7 +564,7 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
         </div>
       ) : companies.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">
-          {searchQuery ? 'لا توجد شركات تطابق بحثك' : 'لا توجد شركات بعد'}
+          {searchQuery ? "لا توجد شركات تطابق بحثك" : "لا توجد شركات بعد"}
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -466,7 +572,7 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
             <Card
               key={company.id}
               className="cursor-pointer transition-colors hover:bg-accent/50"
-              onClick={() => onNavigate('companies', { companyId: company.id })}
+              onClick={() => onNavigate("companies", { companyId: company.id })}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
@@ -491,7 +597,8 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
                 )}
                 <div className="pt-1">
                   <Badge variant="secondary">
-                    {company._count.guests} {company._count.guests === 1 ? 'ضيف' : 'ضيوف'}
+                    {company._count.guests}{" "}
+                    {company._count.guests === 1 ? "ضيف" : "ضيوف"}
                   </Badge>
                 </div>
               </CardContent>
@@ -500,5 +607,5 @@ export default function CompaniesView({ companyId, onNavigate }: CompaniesViewPr
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -11,7 +11,7 @@ export const guestSchema = z.object({
   nationality: z.string().optional(),
   passportNumber: z.string().optional(),
   nationalId: z.string().optional(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
+  gender: z.enum(['MALE', 'FEMALE']).optional(),
   companyId: z.string().optional(),
   notes: z.string().optional(),
 })
