@@ -117,8 +117,10 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-html, button, input {
+html, button, input, select, div, *{
   font-family: Tajawal !important;
+ direction:rtl !important;
+
 }
 
 @layer base {
