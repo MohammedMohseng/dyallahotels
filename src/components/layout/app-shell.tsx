@@ -236,7 +236,7 @@ export function AppShell({
                     key={item.key}
                     onClick={() => handleNavClick(item.key)}
                     className={`
-                      w-full flex justify-start flex-row-reverse items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                      w-full flex justify-start  items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                       transition-colors duration-150
                       ${
                         isActive
